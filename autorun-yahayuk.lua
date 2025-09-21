@@ -22,7 +22,7 @@ local currentIndex = 1
 local HumanoidRootPart
 local Humanoid
 local moveSpeed = 40 -- stud per detik
-local pausePerCheckpoint = 3 -- delay tiap checkpoint (detik)
+local pausePerCheckpoint = 12 -- delay tiap checkpoint (detik)
 local liftHeight = 150 -- seberapa tinggi naik ke atas sebelum teleport
 local isAutoRunning = false
 
