@@ -22,7 +22,7 @@ local currentIndex = 1
 local HumanoidRootPart
 local Humanoid
 local moveSpeed = 30 -- stud per detik
-local pausePerCheckpoint = 12 -- delay tiap checkpoint (detik)
+local pausePerCheckpoint = 20 -- delay tiap checkpoint (detik)
 local liftHeight = 150 -- seberapa tinggi naik ke atas sebelum teleport
 local isAutoRunning = false
 
@@ -92,62 +92,34 @@ local function performAutoJump()
     return false
 end
 
--- Ground-based movement dengan auto jump
-local function moveToPosition(targetPos)
+-- Simple walk function dengan speed moveSpeed
+local function walkToPosition(targetPos)
     if not HumanoidRootPart or not Humanoid or not isAutoRunning then return end
     
-    local startPos = HumanoidRootPart.Position
-    local distance = (targetPos - startPos).Magnitude
-    local direction = (targetPos - startPos).Unit
-    
-    -- Set walkspeed untuk movement
+    -- Set walkspeed
     Humanoid.WalkSpeed = moveSpeed
     
-    -- Move character dengan BodyVelocity untuk kontrol yang lebih baik
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(4000, 0, 4000) -- Tidak apply force ke Y axis
-    bodyVelocity.Velocity = direction * moveSpeed
-    bodyVelocity.Parent = HumanoidRootPart
+    -- Humanoid:MoveTo untuk jalan normal
+    Humanoid:MoveTo(targetPos)
     
+    -- Wait sampai sampai atau timeout
     local startTime = tick()
-    local maxMoveTime = distance / moveSpeed + 2 -- tambah buffer
+    local maxWaitTime = 60 -- maksimal 60 detik
     
-    -- Loop movement dengan auto jump
-    local moveConnection
-    moveConnection = RunService.Heartbeat:Connect(function()
-        if not isAutoRunning then
-            bodyVelocity:Destroy()
-            moveConnection:Disconnect()
-            return
-        end
-        
+    while isAutoRunning do
         local currentPos = HumanoidRootPart.Position
-        local remainingDistance = (targetPos - currentPos).Magnitude
+        local distance = (targetPos - currentPos).Magnitude
         
         -- Auto jump check
-        performAutoJump()
-        
-        -- Update direction jika masih jauh
-        if remainingDistance > 5 then
-            local newDirection = (targetPos - currentPos).Unit
-            bodyVelocity.Velocity = newDirection * moveSpeed
+        if autoJumpEnabled then
+            performAutoJump()
         end
         
         -- Stop jika sudah dekat atau timeout
-        if remainingDistance < 3 or (tick() - startTime) > maxMoveTime then
-            bodyVelocity:Destroy()
-            moveConnection:Disconnect()
-            
-            -- Final positioning
-            task.wait(0.1)
-            if HumanoidRootPart then
-                HumanoidRootPart.CFrame = CFrame.new(targetPos)
-            end
+        if distance < 5 or (tick() - startTime) > maxWaitTime then
+            break
         end
-    end)
-    
-    -- Wait sampai movement selesai
-    while bodyVelocity.Parent and isAutoRunning do
+        
         task.wait(0.1)
     end
 end
@@ -237,8 +209,8 @@ local function startAutoRun()
                 task.wait(pausePerCheckpoint)
                 
                 -- Ground movement dari summit ke start
-                print("🚶 Berjalan kembali ke start dengan ground movement...")
-                moveToPosition(coordinates.start)
+                print("🚶 Berjalan kembali ke start dengan speed " .. moveSpeed .. "...")
+                walkToPosition(coordinates.start)
                 print("🏁 Kembali ke start position")
                 
                 currentIndex = 1
@@ -280,8 +252,8 @@ local function startAutoRunAir()
                 task.wait(pausePerCheckpoint)
                 
                 -- Ground movement dari summit ke start (berbeda dari mode ground)
-                print("🚶 Berjalan kembali ke start dengan ground movement...")
-                moveToPosition(coordinates.start)
+                print("🚶 Berjalan kembali ke start dengan speed " .. moveSpeed .. "...")
+                walkToPosition(coordinates.start)
                 print("🏁 Kembali ke start position")
                 
                 currentIndex = 1
@@ -508,5 +480,5 @@ print("✅ Script Auto Run Mt. Yahayuk berhasil dimuat!")
 print("📋 Checkpoint order: Camp1 → Camp2 → Camp3 → Camp4 → Camp5 → Summit → Start")
 print("🎮 Gunakan GUI untuk mengontrol auto run")
 print("🦘 Auto Jump: Otomatis melompat saat ada rintangan (untuk movement Summit->Base)")
-print("⚡ Instant Mode: Teleport instant ke checkpoint, Summit->Base jalan kaki")
-print("✈️ Air Mode: Teleport melalui udara ke checkpoint, Summit->Base jalan kaki")
+print("⚡ Instant Mode: Teleport instant ke checkpoint, Summit->Base jalan dengan speed " .. moveSpeed)
+print("✈️ Air Mode: Teleport melalui udara ke checkpoint, Summit->Base jalan dengan speed " .. moveSpeed)
