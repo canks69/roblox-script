@@ -10,7 +10,7 @@ local Window = Rayfield:CreateWindow({
    Name = "🏔️ Mt. Aneh Auto Climb",
    Icon = 0,
    LoadingTitle = "Mt. Aneh Controller",
-   LoadingSubtitle = "by RzkyO & mZZ4",
+   LoadingSubtitle = "by Canks",
    Theme = "Default",
 
    DisableRayfieldPrompts = false,
@@ -74,6 +74,60 @@ end
 updateHRP()
 LocalPlayer.CharacterAdded:Connect(updateHRP)
 
+-- Smooth teleport
+local function smoothTeleport(startPos, targetPos, speed)
+    if not HumanoidRootPart then return end
+
+    local distance = (targetPos - startPos).Magnitude
+    local duration = distance / speed
+    local startTime = tick()
+
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        local newPos = startPos:Lerp(targetPos, alpha)
+        HumanoidRootPart.CFrame = CFrame.new(newPos)
+
+        if alpha >= 1 then
+            connection:Disconnect()
+        end
+    end)
+
+    task.wait(duration + 0.05)
+end
+
+-- Teleport via atas
+local function teleportViaAir(targetPos)
+    if not HumanoidRootPart then return end
+
+    local currentPos = HumanoidRootPart.Position
+    local upPos = currentPos + Vector3.new(0, liftHeight, 0)
+    local downPos = targetPos + Vector3.new(0, liftHeight, 0)
+
+    -- Step 1: Naik dulu
+    smoothTeleport(currentPos, upPos, moveSpeed * 2)
+
+    -- Step 2: Pindah horizontal (masih di atas)
+    smoothTeleport(upPos, downPos, moveSpeed * 3)
+
+    -- Step 3: Turun ke target
+    smoothTeleport(downPos, targetPos, moveSpeed * 2)
+end
+
+-- Safe Wait Function (respects pause state)
+local function safeWait(seconds)
+    local elapsed = 0
+    while elapsed < seconds and isRunning do
+        if not isPaused then
+            elapsed = elapsed + task.wait(0.1)
+        else
+            task.wait(0.1) -- Still wait but don't increment elapsed while paused
+        end
+    end
+    return isRunning
+end
+
 -- UI Elements
 local MainTab = Window:CreateTab("🎮 Control")
 local SettingsTab = Window:CreateTab("⚙️ Settings")
@@ -96,6 +150,92 @@ local function updateStatus()
         StatusLabel:Set("📊 Status: ⏹️ Stopped")
         CurrentCPLabel:Set("📍 Current: Not Started")
     end
+end
+
+-- Update the Stop Main Loop Function to use proper updateStatus reference
+local function stopMainLoop()
+    isRunning = false
+    isPaused = false
+    if mainLoop then
+        task.cancel(mainLoop)
+        mainLoop = nil
+    end
+    currentIndex = 1
+    updateStatus()
+end
+
+-- Update the Start Main Loop Function
+local function startMainLoop()
+    if mainLoop then
+        task.cancel(mainLoop)
+    end
+    
+    mainLoop = task.spawn(function()
+        while isRunning do
+            -- Wait if paused
+            while isPaused and isRunning do
+                updateStatus()
+                task.wait(0.1)
+            end
+            
+            if not isRunning then break end
+            
+            if HumanoidRootPart then
+                local cp = checkpointOrder[currentIndex]
+                local target = coordinates[cp]
+
+                if target then
+                    updateStatus()
+                    
+                    -- Cek apakah ini summit dan akan kembali ke base
+                    if cp == "summit" and currentIndex == #checkpointOrder then
+                        print("▶️ Teleport via udara ke " .. string.upper(cp))
+                        teleportViaAir(target)
+                        print("✅ Sampai di " .. string.upper(cp))
+                        
+                        if not safeWait(pausePerCheckpoint) then break end
+                        
+                        -- Instant teleport ke base
+                        print("⚡ Instant teleport kembali ke base")
+                        if HumanoidRootPart then
+                            HumanoidRootPart.CFrame = CFrame.new(coordinates.base)
+                        end
+                        print("✅ Kembali di base")
+                        
+                        currentIndex = 1
+                        if not safeWait(5) then break end -- extra delay tiap cycle
+                    else
+                        print("▶️ Teleport via udara ke " .. string.upper(cp))
+                        teleportViaAir(target)
+                        print("✅ Sampai di " .. string.upper(cp))
+
+                        if not safeWait(pausePerCheckpoint) then break end
+
+                        currentIndex += 1
+                    end
+                    
+                    updateStatus()
+                else
+                    print("❌ Invalid checkpoint: " .. tostring(cp))
+                    break
+                end
+            else
+                print("❌ HumanoidRootPart not found!")
+                break
+            end
+            
+            task.wait(0.1) -- Small delay to prevent lag
+        end
+        
+        -- Cleanup when loop ends
+        isRunning = false
+        isPaused = false
+        if _G.PlayPauseToggle and _G.PlayPauseToggle.Set then
+            _G.PlayPauseToggle:Set(false)
+        end
+        updateStatus()
+        print("⏹️ Main loop ended")
+    end)
 end
 
 -- Control Section
@@ -178,13 +318,16 @@ local PlayPauseToggle = MainTab:CreateToggle({
     end,
 })
 
+-- Store reference globally for access from other functions
+_G.PlayPauseToggle = PlayPauseToggle
+
 -- Stop Button
 local StopButton = MainTab:CreateButton({
     Name = "⏹️ Stop",
     Callback = function()
         stopMainLoop()
-        if PlayPauseToggle then
-            PlayPauseToggle:Set(false)
+        if _G.PlayPauseToggle and _G.PlayPauseToggle.Set then
+            _G.PlayPauseToggle:Set(false)
         end
         print("⏹️ Auto climb stopped")
     end,
@@ -292,146 +435,6 @@ local TeleportSummitButton = SettingsTab:CreateButton({
         end
     end,
 })
-
--- Smooth teleport
-local function smoothTeleport(startPos, targetPos, speed)
-    if not HumanoidRootPart then return end
-
-    local distance = (targetPos - startPos).Magnitude
-    local duration = distance / speed
-    local startTime = tick()
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        local elapsed = tick() - startTime
-        local alpha = math.clamp(elapsed / duration, 0, 1)
-        local newPos = startPos:Lerp(targetPos, alpha)
-        HumanoidRootPart.CFrame = CFrame.new(newPos)
-
-        if alpha >= 1 then
-            connection:Disconnect()
-        end
-    end)
-
-    task.wait(duration + 0.05)
-end
-
--- Teleport via atas
-local function teleportViaAir(targetPos)
-    if not HumanoidRootPart then return end
-
-    local currentPos = HumanoidRootPart.Position
-    local upPos = currentPos + Vector3.new(0, liftHeight, 0)
-    local downPos = targetPos + Vector3.new(0, liftHeight, 0)
-
-    -- Step 1: Naik dulu
-    smoothTeleport(currentPos, upPos, moveSpeed * 2)
-
-    -- Step 2: Pindah horizontal (masih di atas)
-    smoothTeleport(upPos, downPos, moveSpeed * 3)
-
-    -- Step 3: Turun ke target
-    smoothTeleport(downPos, targetPos, moveSpeed * 2)
-end
-
--- Safe Wait Function (respects pause state)
-local function safeWait(seconds)
-    local elapsed = 0
-    while elapsed < seconds and isRunning do
-        if not isPaused then
-            elapsed = elapsed + task.wait(0.1)
-        else
-            task.wait(0.1) -- Still wait but don't increment elapsed while paused
-        end
-    end
-    return isRunning
-end
-
--- Stop Main Loop Function
-local function stopMainLoop()
-    isRunning = false
-    isPaused = false
-    if mainLoop then
-        task.cancel(mainLoop)
-        mainLoop = nil
-    end
-    currentIndex = 1
-    updateStatus()
-end
-
--- Start Main Loop Function
-local function startMainLoop()
-    if mainLoop then
-        task.cancel(mainLoop)
-    end
-    
-    mainLoop = task.spawn(function()
-        while isRunning do
-            -- Wait if paused
-            while isPaused and isRunning do
-                updateStatus()
-                task.wait(0.1)
-            end
-            
-            if not isRunning then break end
-            
-            if HumanoidRootPart then
-                local cp = checkpointOrder[currentIndex]
-                local target = coordinates[cp]
-
-                if target then
-                    updateStatus()
-                    
-                    -- Cek apakah ini summit dan akan kembali ke base
-                    if cp == "summit" and currentIndex == #checkpointOrder then
-                        print("▶️ Teleport via udara ke " .. string.upper(cp))
-                        teleportViaAir(target)
-                        print("✅ Sampai di " .. string.upper(cp))
-                        
-                        if not safeWait(pausePerCheckpoint) then break end
-                        
-                        -- Instant teleport ke base
-                        print("⚡ Instant teleport kembali ke base")
-                        if HumanoidRootPart then
-                            HumanoidRootPart.CFrame = CFrame.new(coordinates.base)
-                        end
-                        print("✅ Kembali di base")
-                        
-                        currentIndex = 1
-                        if not safeWait(5) then break end -- extra delay tiap cycle
-                    else
-                        print("▶️ Teleport via udara ke " .. string.upper(cp))
-                        teleportViaAir(target)
-                        print("✅ Sampai di " .. string.upper(cp))
-
-                        if not safeWait(pausePerCheckpoint) then break end
-
-                        currentIndex += 1
-                    end
-                    
-                    updateStatus()
-                else
-                    print("❌ Invalid checkpoint: " .. tostring(cp))
-                    break
-                end
-            else
-                print("❌ HumanoidRootPart not found!")
-                break
-            end
-            
-            task.wait(0.1) -- Small delay to prevent lag
-        end
-        
-        -- Cleanup when loop ends
-        isRunning = false
-        isPaused = false
-        if PlayPauseToggle then
-            PlayPauseToggle:Set(false)
-        end
-        updateStatus()
-        print("⏹️ Main loop ended")
-    end)
-end
 
 -- Info Tab
 local InfoTab = Window:CreateTab("ℹ️ Info")
