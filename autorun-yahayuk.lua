@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 -- Koordinat Mt. Yahayuk
 local coordinates = {
-    camp1 = Vector3.new(-429, 265, 788),
+    camp1 = Vector3.new(-413, 250, 763),
     camp2 = Vector3.new(-369, 389, 531),
     camp3 = Vector3.new(269, 431, 525),
     camp4 = Vector3.new(322, 490, 357),
