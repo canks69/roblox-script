@@ -10,7 +10,7 @@ local Window = Rayfield:CreateWindow({
    Name = "🏔️ Mt. Aetherys Auto Climb",
    Icon = 0,
    LoadingTitle = "Mt. Aetherys Controller",
-   LoadingSubtitle = "by RzkyO & mZZ4",
+   LoadingSubtitle = "by Canks",
    Theme = "Default",
 
    DisableRayfieldPrompts = false,
