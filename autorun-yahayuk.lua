@@ -4,13 +4,13 @@ local RunService = game:GetService("RunService")
 
 -- Koordinat Mt. Yahayuk
 local coordinates = {
-    camp1 = Vector3.new(-429.05, 265.50, 788.27),
-    camp2 = Vector3.new(-369.93, 389.13, 531.62),
-    camp3 = Vector3.new(269.24, 431.13, 525.28),
-    camp4 = Vector3.new(322.31, 490.13, 357.97),
-    camp5 = Vector3.new(232.20, 315.13, -145.73),
-    summit = Vector3.new(-621.06, 906.50, -520.25),
-    start = Vector3.new(-640.25, 905.50, -503.76),
+    camp1 = Vector3.new(-429, 265.50, 788),
+    camp2 = Vector3.new(-369, 389.50, 531),
+    camp3 = Vector3.new(269, 431.50, 525),
+    camp4 = Vector3.new(322, 490.50, 357),
+    camp5 = Vector3.new(232, 315.50, -145),
+    summit = Vector3.new(-621, 906.50, -520),
+    start = Vector3.new(-640, 905.50, -503),
 }
 
 local checkpointOrder = {
