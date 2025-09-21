@@ -74,6 +74,7 @@ local autoRespawn = false -- Auto respawn after summit
 local infiniteLoop = false -- Infinite loop mode
 local loopCount = 1 -- Number of loops
 local currentLoop = 1 -- Current loop counter
+local useInstantTeleport = true -- Use instant teleport by default
 
 -- Function buat update HRP setelah respawn
 local function updateHRP()
@@ -84,7 +85,14 @@ end
 updateHRP()
 LocalPlayer.CharacterAdded:Connect(updateHRP)
 
--- Smooth teleport
+-- Instant teleport function
+local function instantTeleport(targetPos)
+    if not HumanoidRootPart then return end
+    
+    HumanoidRootPart.CFrame = CFrame.new(targetPos)
+end
+
+-- Smooth teleport (kept for optional use)
 local function smoothTeleport(startPos, targetPos, speed)
     if not HumanoidRootPart then return end
 
@@ -107,22 +115,28 @@ local function smoothTeleport(startPos, targetPos, speed)
     task.wait(duration + 0.05)
 end
 
--- Teleport via atas
+-- Teleport via atas (now using instant teleport)
 local function teleportViaAir(targetPos)
     if not HumanoidRootPart then return end
 
-    local currentPos = HumanoidRootPart.Position
-    local upPos = currentPos + Vector3.new(0, liftHeight, 0)
-    local downPos = targetPos + Vector3.new(0, liftHeight, 0)
+    if useInstantTeleport then
+        -- Direct instant teleport to target
+        instantTeleport(targetPos)
+    else
+        -- Original smooth teleport via air
+        local currentPos = HumanoidRootPart.Position
+        local upPos = currentPos + Vector3.new(0, liftHeight, 0)
+        local downPos = targetPos + Vector3.new(0, liftHeight, 0)
 
-    -- Step 1: Naik dulu
-    smoothTeleport(currentPos, upPos, moveSpeed * 2)
+        -- Step 1: Naik dulu
+        smoothTeleport(currentPos, upPos, moveSpeed * 2)
 
-    -- Step 2: Pindah horizontal (masih di atas)
-    smoothTeleport(upPos, downPos, moveSpeed * 3)
+        -- Step 2: Pindah horizontal (masih di atas)
+        smoothTeleport(upPos, downPos, moveSpeed * 3)
 
-    -- Step 3: Turun ke target
-    smoothTeleport(downPos, targetPos, moveSpeed * 2)
+        -- Step 3: Turun ke target
+        smoothTeleport(downPos, targetPos, moveSpeed * 2)
+    end
 end
 
 -- Safe Wait Function (respects pause state)
@@ -234,8 +248,8 @@ local function startMainLoop()
                     local summitPos = coordinates.summit
                     if summitPos then
                         updateStatus()
-                        print("▶️ Teleport via udara ke SUMMIT")
-                        teleportViaAir(summitPos)
+                        print("▶️ Instant teleport ke SUMMIT")
+                        instantTeleport(summitPos)
                         print("✅ Sampai di SUMMIT")
                         
                         if not safeWait(pausePerCheckpoint) then break end
@@ -248,7 +262,7 @@ local function startMainLoop()
                         else
                             print("⚡ Instant teleport kembali ke base")
                             if HumanoidRootPart then
-                                HumanoidRootPart.CFrame = CFrame.new(coordinates.base)
+                                instantTeleport(coordinates.base)
                             end
                             print("✅ Kembali di base")
                         end
@@ -281,8 +295,12 @@ local function startMainLoop()
                             
                             -- Check if this is summit
                             if cp == "summit" and currentIndex == #checkpointOrder then
-                                print("▶️ Teleport via udara ke " .. string.upper(cp))
-                                teleportViaAir(target)
+                                print("▶️ " .. (useInstantTeleport and "Instant teleport" or "Teleport via udara") .. " ke " .. string.upper(cp))
+                                if useInstantTeleport then
+                                    instantTeleport(target)
+                                else
+                                    teleportViaAir(target)
+                                end
                                 print("✅ Sampai di " .. string.upper(cp))
                                 
                                 if not safeWait(pausePerCheckpoint) then break end
@@ -295,7 +313,7 @@ local function startMainLoop()
                                 else
                                     print("⚡ Instant teleport kembali ke base")
                                     if HumanoidRootPart then
-                                        HumanoidRootPart.CFrame = CFrame.new(coordinates.base)
+                                        instantTeleport(coordinates.base)
                                     end
                                     print("✅ Kembali di base")
                                 end
@@ -307,8 +325,12 @@ local function startMainLoop()
                                 if not safeWait(5) then break end -- Extra delay between loops
                                 break -- Break inner loop to start next cycle
                             else
-                                print("▶️ Teleport via udara ke " .. string.upper(cp))
-                                teleportViaAir(target)
+                                print("▶️ " .. (useInstantTeleport and "Instant teleport" or "Teleport via udara") .. " ke " .. string.upper(cp))
+                                if useInstantTeleport then
+                                    instantTeleport(target)
+                                else
+                                    teleportViaAir(target)
+                                end
                                 print("✅ Sampai di " .. string.upper(cp))
 
                                 if not safeWait(pausePerCheckpoint) then break end
@@ -458,6 +480,24 @@ local SkipToggle = FeaturesTab:CreateToggle({
     end,
 })
 
+-- Teleport Mode Section
+local TeleportModeSection = FeaturesTab:CreateSection("🚀 Teleport Mode")
+
+-- Instant Teleport Toggle
+local InstantTeleportToggle = FeaturesTab:CreateToggle({
+    Name = "⚡ Instant Teleport (Recommended)",
+    CurrentValue = true,
+    Flag = "InstantTeleportToggle",
+    Callback = function(Value)
+        useInstantTeleport = Value
+        if useInstantTeleport then
+            print("⚡ Instant teleport enabled - immediate teleportation!")
+        else
+            print("🎬 Smooth teleport enabled - animated movement")
+        end
+    end,
+})
+
 -- Auto Respawn Section
 local RespawnSection = FeaturesTab:CreateSection("💀 Respawn Options")
 
@@ -565,8 +605,8 @@ local TeleportBaseButton = SettingsTab:CreateButton({
     Name = "🏠 Teleport to Base",
     Callback = function()
         if HumanoidRootPart then
-            HumanoidRootPart.CFrame = CFrame.new(coordinates.base)
-            print("🏠 Teleported to Base")
+            instantTeleport(coordinates.base)
+            print("🏠 Instantly teleported to Base")
         end
     end,
 })
@@ -575,8 +615,8 @@ local TeleportSummitButton = SettingsTab:CreateButton({
     Name = "🏔️ Teleport to Summit",
     Callback = function()
         if HumanoidRootPart then
-            HumanoidRootPart.CFrame = CFrame.new(coordinates.summit)
-            print("🏔️ Teleported to Summit")
+            instantTeleport(coordinates.summit)
+            print("🏔️ Instantly teleported to Summit")
         end
     end,
 })
@@ -585,8 +625,8 @@ local TeleportCP7Button = SettingsTab:CreateButton({
     Name = "📍 Teleport to CP7 (Mid Point)",
     Callback = function()
         if HumanoidRootPart then
-            HumanoidRootPart.CFrame = CFrame.new(coordinates.cp7)
-            print("📍 Teleported to CP7")
+            instantTeleport(coordinates.cp7)
+            print("📍 Instantly teleported to CP7")
         end
     end,
 })
@@ -595,8 +635,8 @@ local TeleportCP14Button = SettingsTab:CreateButton({
     Name = "📍 Teleport to CP14 (Near Summit)",
     Callback = function()
         if HumanoidRootPart then
-            HumanoidRootPart.CFrame = CFrame.new(coordinates.cp14)
-            print("📍 Teleported to CP14")
+            instantTeleport(coordinates.cp14)
+            print("📍 Instantly teleported to CP14")
         end
     end,
 })
@@ -612,7 +652,7 @@ InfoTab:CreateParagraph({
 
 InfoTab:CreateParagraph({
     Title = "✨ Special Features",
-    Content = "• Skip Checkpoints: Direct teleport to summit\n• Auto Respawn: Respawn after reaching summit\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs"
+    Content = "• Skip Checkpoints: Direct teleport to summit\n• Auto Respawn: Respawn after reaching summit\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs\n• Instant Teleport: Immediate teleportation (default)\n• Smooth Teleport: Animated movement (optional)"
 })
 
 InfoTab:CreateParagraph({
