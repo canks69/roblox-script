@@ -4,13 +4,13 @@ local RunService = game:GetService("RunService")
 
 -- Koordinat Mt. Yahayuk
 local coordinates = {
-    camp1 = Vector3.new(-429, 265.50, 788),
-    camp2 = Vector3.new(-369, 389.50, 531),
-    camp3 = Vector3.new(269, 431.50, 525),
-    camp4 = Vector3.new(322, 490.50, 357),
-    camp5 = Vector3.new(232, 315.50, -145),
-    summit = Vector3.new(-621, 906.50, -520),
-    start = Vector3.new(-640, 905.50, -503),
+    camp1 = Vector3.new(-429, 265, 788),
+    camp2 = Vector3.new(-369, 389, 531),
+    camp3 = Vector3.new(269, 431, 525),
+    camp4 = Vector3.new(322, 490, 357),
+    camp5 = Vector3.new(232, 315, -145),
+    summit = Vector3.new(-621, 906, -520),
+    start = Vector3.new(-640, 905, -503),
 }
 
 local checkpointOrder = {
@@ -214,11 +214,12 @@ local function instantTeleport(targetPos)
     HumanoidRootPart.CFrame = CFrame.new(targetPos)
 end
 
--- Main auto run function dengan ground movement
+-- Main auto run function dengan instant teleport
 local function startAutoRun()
     isAutoRunning = true
     print("🚀 Auto Run Mt. Yahayuk dimulai!")
-    print("🦘 Auto Jump: " .. (autoJumpEnabled and "AKTIF" or "NONAKTIF"))
+    print("⚡ Mode: Instant Teleport ke checkpoint")
+    print("🚶 Summit ke Base: Ground movement dengan auto jump")
     
     while isAutoRunning do
         if HumanoidRootPart then
@@ -227,24 +228,24 @@ local function startAutoRun()
 
             -- Cek apakah ini summit dan akan kembali ke start
             if cp == "summit" and currentIndex == #checkpointOrder then
-                print("▶️ Menuju ke " .. cp .. " (Summit) dengan ground movement")
-                moveToPosition(target)
+                print("▶️ Teleport ke " .. cp .. " (Summit)")
+                instantTeleport(target)
                 
                 if not isAutoRunning then break end
                 
                 print("🏔️ Sampai di Summit Mt. Yahayuk!")
                 task.wait(pausePerCheckpoint)
                 
-                -- Instant teleport ke start position
-                print("⚡ Teleport kembali ke start...")
-                instantTeleport(coordinates.start)
+                -- Ground movement dari summit ke start
+                print("🚶 Berjalan kembali ke start dengan ground movement...")
+                moveToPosition(coordinates.start)
                 print("🏁 Kembali ke start position")
                 
                 currentIndex = 1
                 task.wait(5) -- extra delay sebelum cycle baru
             else
-                print("▶️ Menuju ke " .. cp .. " dengan ground movement")
-                moveToPosition(target)
+                print("▶️ Teleport ke " .. cp)
+                instantTeleport(target)
                 
                 if not isAutoRunning then break end
                 
@@ -278,9 +279,9 @@ local function startAutoRunAir()
                 print("🏔️ Sampai di Summit Mt. Yahayuk!")
                 task.wait(pausePerCheckpoint)
                 
-                -- Instant teleport ke start position
-                print("⚡ Teleport kembali ke start...")
-                instantTeleport(coordinates.start)
+                -- Ground movement dari summit ke start (berbeda dari mode ground)
+                print("🚶 Berjalan kembali ke start dengan ground movement...")
+                moveToPosition(coordinates.start)
                 print("🏁 Kembali ke start position")
                 
                 currentIndex = 1
@@ -402,12 +403,12 @@ JumpCorner.Parent = JumpToggle
 -- Mode Toggle Button
 ModeToggle.Name = "ModeToggle"
 ModeToggle.Parent = MainFrame
-ModeToggle.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
+ModeToggle.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
 ModeToggle.BorderSizePixel = 0
 ModeToggle.Position = UDim2.new(0.55, 0, 0.4, 0)
 ModeToggle.Size = UDim2.new(0.35, 0, 0.12, 0)
 ModeToggle.Font = Enum.Font.SourceSans
-ModeToggle.Text = "🚶 Ground"
+ModeToggle.Text = "⚡ Instant"
 ModeToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 ModeToggle.TextScaled = true
 
@@ -475,9 +476,9 @@ end)
 ModeToggle.MouseButton1Click:Connect(function()
     if not isAutoRunning then
         useGroundMovement = not useGroundMovement
-        ModeToggle.Text = useGroundMovement and "🚶 Ground" or "✈️ Air"
-        ModeToggle.BackgroundColor3 = useGroundMovement and Color3.fromRGB(200, 120, 0) or Color3.fromRGB(0, 150, 200)
-        print("🚶 Mode: " .. (useGroundMovement and "Ground Movement" or "Air Teleport"))
+        ModeToggle.Text = useGroundMovement and "⚡ Instant" or "✈️ Air"
+        ModeToggle.BackgroundColor3 = useGroundMovement and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(0, 150, 200)
+        print("🚶 Mode: " .. (useGroundMovement and "Instant Teleport (Summit->Base: Ground)" or "Air Teleport (Summit->Base: Ground)"))
     else
         print("⚠️ Tidak bisa ganti mode saat auto run sedang berjalan!")
     end
@@ -506,6 +507,6 @@ end)
 print("✅ Script Auto Run Mt. Yahayuk berhasil dimuat!")
 print("📋 Checkpoint order: Camp1 → Camp2 → Camp3 → Camp4 → Camp5 → Summit → Start")
 print("🎮 Gunakan GUI untuk mengontrol auto run")
-print("🦘 Auto Jump: Otomatis melompat saat ada rintangan")
-print("🚶 Ground Mode: Bergerak di tanah dengan auto jump")
-print("✈️ Air Mode: Teleport melalui udara")
+print("🦘 Auto Jump: Otomatis melompat saat ada rintangan (untuk movement Summit->Base)")
+print("⚡ Instant Mode: Teleport instant ke checkpoint, Summit->Base jalan kaki")
+print("✈️ Air Mode: Teleport melalui udara ke checkpoint, Summit->Base jalan kaki")
