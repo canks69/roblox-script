@@ -258,6 +258,49 @@ local function startAutoRun()
     end
 end
 
+-- Air teleport mode (original)
+local function startAutoRunAir()
+    isAutoRunning = true
+    print("🚀 Auto Run Mt. Yahayuk dimulai (Air Mode)!")
+    
+    while isAutoRunning do
+        if HumanoidRootPart then
+            local cp = checkpointOrder[currentIndex]
+            local target = coordinates[cp]
+
+            -- Cek apakah ini summit dan akan kembali ke start
+            if cp == "summit" and currentIndex == #checkpointOrder then
+                print("▶️ Menuju ke " .. cp .. " (Summit) via air")
+                teleportViaAir(target)
+                
+                if not isAutoRunning then break end
+                
+                print("🏔️ Sampai di Summit Mt. Yahayuk!")
+                task.wait(pausePerCheckpoint)
+                
+                -- Instant teleport ke start position
+                print("⚡ Teleport kembali ke start...")
+                instantTeleport(coordinates.start)
+                print("🏁 Kembali ke start position")
+                
+                currentIndex = 1
+                task.wait(5) -- extra delay sebelum cycle baru
+            else
+                print("▶️ Menuju ke " .. cp .. " via air")
+                teleportViaAir(target)
+                
+                if not isAutoRunning then break end
+                
+                print("✅ Sampai di " .. cp)
+                task.wait(pausePerCheckpoint)
+
+                currentIndex += 1
+            end
+        end
+        task.wait(0.5)
+    end
+end
+
 -- Stop auto run function
 local function stopAutoRun()
     isAutoRunning = false
@@ -404,7 +447,12 @@ StartButton.MouseButton1Click:Connect(function()
     if not isAutoRunning then
         StatusLabel.Text = "Status: Berjalan..."
         StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        task.spawn(startAutoRun)
+        
+        if useGroundMovement then
+            task.spawn(startAutoRun)
+        else
+            task.spawn(startAutoRunAir)
+        end
     end
 end)
 
@@ -414,6 +462,24 @@ StopButton.MouseButton1Click:Connect(function()
         StatusLabel.Text = "Status: Dihentikan"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         currentIndex = 1 -- reset ke awal
+    end
+end)
+
+JumpToggle.MouseButton1Click:Connect(function()
+    autoJumpEnabled = not autoJumpEnabled
+    JumpToggle.Text = "🦘 Jump: " .. (autoJumpEnabled and "ON" or "OFF")
+    JumpToggle.BackgroundColor3 = autoJumpEnabled and Color3.fromRGB(0, 120, 200) or Color3.fromRGB(120, 120, 120)
+    print("🦘 Auto Jump: " .. (autoJumpEnabled and "AKTIF" or "NONAKTIF"))
+end)
+
+ModeToggle.MouseButton1Click:Connect(function()
+    if not isAutoRunning then
+        useGroundMovement = not useGroundMovement
+        ModeToggle.Text = useGroundMovement and "🚶 Ground" or "✈️ Air"
+        ModeToggle.BackgroundColor3 = useGroundMovement and Color3.fromRGB(200, 120, 0) or Color3.fromRGB(0, 150, 200)
+        print("🚶 Mode: " .. (useGroundMovement and "Ground Movement" or "Air Teleport"))
+    else
+        print("⚠️ Tidak bisa ganti mode saat auto run sedang berjalan!")
     end
 end)
 
@@ -440,3 +506,6 @@ end)
 print("✅ Script Auto Run Mt. Yahayuk berhasil dimuat!")
 print("📋 Checkpoint order: Camp1 → Camp2 → Camp3 → Camp4 → Camp5 → Summit → Start")
 print("🎮 Gunakan GUI untuk mengontrol auto run")
+print("🦘 Auto Jump: Otomatis melompat saat ada rintangan")
+print("🚶 Ground Mode: Bergerak di tanah dengan auto jump")
+print("✈️ Air Mode: Teleport melalui udara")
