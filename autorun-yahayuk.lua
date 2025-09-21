@@ -5,12 +5,12 @@ local RunService = game:GetService("RunService")
 -- Koordinat Mt. Yahayuk
 local coordinates = {
     camp1 = Vector3.new(-429.05, 265.50, 788.27),
-    camp2 = Vector3.new(-359.93, 405.13, 541.62),
-    camp3 = Vector3.new(288.24, 446.13, 506.28),
-    camp4 = Vector3.new(336.31, 507.13, 348.97),
-    camp5 = Vector3.new(224.20, 331.13, -144.73),
-    summit = Vector3.new(-614.06, 904.50, -551.25),
-    start = Vector3.new(-674.25, 909.50, -481.76),
+    camp2 = Vector3.new(-369.93, 389.13, 531.62),
+    camp3 = Vector3.new(269.24, 431.13, 525.28),
+    camp4 = Vector3.new(322.31, 490.13, 357.97),
+    camp5 = Vector3.new(232.20, 315.13, -145.73),
+    summit = Vector3.new(-621.06, 906.50, -520.25),
+    start = Vector3.new(-640.25, 905.50, -503.76),
 }
 
 local checkpointOrder = {
@@ -21,7 +21,7 @@ local checkpointOrder = {
 local currentIndex = 1
 local HumanoidRootPart
 local Humanoid
-local moveSpeed = 80 -- stud per detik
+local moveSpeed = 40 -- stud per detik
 local pausePerCheckpoint = 3 -- delay tiap checkpoint (detik)
 local liftHeight = 150 -- seberapa tinggi naik ke atas sebelum teleport
 local isAutoRunning = false
