@@ -600,7 +600,7 @@ local LiftSlider = SettingsTab:CreateSlider({
 -- Manual Teleport Section
 local TeleportSection = SettingsTab:CreateSection("📍 Manual Teleport")
 
--- Quick teleport buttons
+-- Base and Summit
 local TeleportBaseButton = SettingsTab:CreateButton({
     Name = "🏠 Teleport to Base",
     Callback = function()
@@ -612,7 +612,7 @@ local TeleportBaseButton = SettingsTab:CreateButton({
 })
 
 local TeleportSummitButton = SettingsTab:CreateButton({
-    Name = "🏔️ Teleport to Summit",
+    Name = "�️ Teleport to Summit",
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.summit)
@@ -621,8 +621,69 @@ local TeleportSummitButton = SettingsTab:CreateButton({
     end,
 })
 
+-- All Checkpoints CP1-CP14
+local TeleportCP1Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP1",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp1)
+            print("📍 Instantly teleported to CP1")
+        end
+    end,
+})
+
+local TeleportCP2Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP2",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp2)
+            print("📍 Instantly teleported to CP2")
+        end
+    end,
+})
+
+local TeleportCP3Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP3",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp3)
+            print("📍 Instantly teleported to CP3")
+        end
+    end,
+})
+
+local TeleportCP4Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP4",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp4)
+            print("📍 Instantly teleported to CP4")
+        end
+    end,
+})
+
+local TeleportCP5Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP5",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp5)
+            print("📍 Instantly teleported to CP5")
+        end
+    end,
+})
+
+local TeleportCP6Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP6",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp6)
+            print("📍 Instantly teleported to CP6")
+        end
+    end,
+})
+
 local TeleportCP7Button = SettingsTab:CreateButton({
-    Name = "📍 Teleport to CP7 (Mid Point)",
+    Name = "📍 Teleport to CP7",
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp7)
@@ -631,8 +692,68 @@ local TeleportCP7Button = SettingsTab:CreateButton({
     end,
 })
 
+local TeleportCP8Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP8",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp8)
+            print("📍 Instantly teleported to CP8")
+        end
+    end,
+})
+
+local TeleportCP9Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP9",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp9)
+            print("📍 Instantly teleported to CP9")
+        end
+    end,
+})
+
+local TeleportCP10Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP10",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp10)
+            print("📍 Instantly teleported to CP10")
+        end
+    end,
+})
+
+local TeleportCP11Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP11",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp11)
+            print("📍 Instantly teleported to CP11")
+        end
+    end,
+})
+
+local TeleportCP12Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP12",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp12)
+            print("📍 Instantly teleported to CP12")
+        end
+    end,
+})
+
+local TeleportCP13Button = SettingsTab:CreateButton({
+    Name = "📍 Teleport to CP13",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp13)
+            print("📍 Instantly teleported to CP13")
+        end
+    end,
+})
+
 local TeleportCP14Button = SettingsTab:CreateButton({
-    Name = "📍 Teleport to CP14 (Near Summit)",
+    Name = "📍 Teleport to CP14",
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp14)
