@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
 
 -- ====== ANIMASI ======
 local Animations = {
@@ -37,6 +38,31 @@ local function PlayAnim(name)
     end
 end
 
+-- Fungsi untuk mengatur orientasi karakter menghadap target
+local function faceDirection(targetPos)
+    local currentPos = rootPart.Position
+    local direction = (targetPos - currentPos).Unit
+    local lookDirection = Vector3.new(direction.X, 0, direction.Z).Unit
+    
+    if lookDirection.Magnitude > 0 then
+        local targetCFrame = CFrame.lookAt(currentPos, currentPos + lookDirection)
+        rootPart.CFrame = targetCFrame
+    end
+end
+
+-- Fungsi untuk smooth camera follow
+local function smoothCameraFollow(targetPos, cameraOffset)
+    cameraOffset = cameraOffset or Vector3.new(0, 5, 8)
+    
+    local targetCameraPos = targetPos + cameraOffset
+    
+    camera.CameraType = Enum.CameraType.Scriptable
+    local cameraTween = TweenService:Create(camera, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        CFrame = CFrame.lookAt(targetCameraPos, targetPos)
+    })
+    cameraTween:Play()
+end
+
 -- ====== CONFIG MOVEMENT ======
 local MOVEMENT_CONFIG = {
     jalan = {
@@ -55,19 +81,81 @@ local MOVEMENT_CONFIG = {
     }
 }
 
+-- Fungsi untuk smooth move dengan jump arc
+local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
+    local distance = (endPos - startPos).Magnitude
+    local duration = distance / speed
+    local startTime = tick()
+    
+    jumpHeight = jumpHeight or 10 -- Default jump height
+    
+    -- Set orientasi karakter menghadap target
+    faceDirection(endPos)
+    
+    -- Set camera follow target
+    smoothCameraFollow(endPos)
+
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        
+        -- Linear interpolation untuk X dan Z
+        local newPosXZ = Vector3.new(
+            startPos.X + (endPos.X - startPos.X) * alpha,
+            0,
+            startPos.Z + (endPos.Z - startPos.Z) * alpha
+        )
+        
+        -- Parabolic arc untuk Y (jump trajectory)
+        local jumpY = startPos.Y + (endPos.Y - startPos.Y) * alpha + jumpHeight * math.sin(math.pi * alpha)
+        local newPos = Vector3.new(newPosXZ.X, jumpY, newPosXZ.Z)
+        
+        if rootPart then
+            -- Maintain character orientation while moving
+            local direction = (endPos - startPos).Unit
+            local lookDirection = Vector3.new(direction.X, 0, direction.Z).Unit
+            if lookDirection.Magnitude > 0 then
+                rootPart.CFrame = CFrame.lookAt(newPos, newPos + lookDirection)
+            else
+                rootPart.CFrame = CFrame.new(newPos)
+            end
+        end
+        if alpha >= 1 then
+            connection:Disconnect()
+        end
+    end)
+
+    task.wait(duration + 0.05)
+end
+
 -- Fungsi untuk smooth move menggunakan RunService.Heartbeat
 local function smoothMove(startPos, endPos, speed)
     local distance = (endPos - startPos).Magnitude
     local duration = distance / speed
     local startTime = tick()
+    
+    -- Set orientasi karakter menghadap target
+    faceDirection(endPos)
+    
+    -- Set camera follow target
+    smoothCameraFollow(endPos)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
         local elapsed = tick() - startTime
         local alpha = math.clamp(elapsed / duration, 0, 1)
         local newPos = startPos:Lerp(endPos, alpha)
+        
         if rootPart then
-            rootPart.CFrame = CFrame.new(newPos)
+            -- Maintain character orientation while moving
+            local direction = (endPos - startPos).Unit
+            local lookDirection = Vector3.new(direction.X, 0, direction.Z).Unit
+            if lookDirection.Magnitude > 0 then
+                rootPart.CFrame = CFrame.lookAt(newPos, newPos + lookDirection)
+            else
+                rootPart.CFrame = CFrame.new(newPos)
+            end
         end
         if alpha >= 1 then
             connection:Disconnect()
@@ -99,22 +187,19 @@ end
 function Lompat(x, y, z)
     print("🦘 Lompat ke: " .. x .. ", " .. y .. ", " .. z)
     
+    local startPos = rootPart.Position
     local targetPosition = Vector3.new(x, y, z)
     local speed = MOVEMENT_CONFIG.lompat.speed
+    local jumpHeight = 8 -- Tinggi lompatan
     
-    humanoid.Jump = true
-    humanoid.JumpPower = MOVEMENT_CONFIG.lompat.jumpPower
     humanoid.WalkSpeed = speed
-    
     PlayAnim("Jump")
     
-    wait(0.2)
-    local startPos = rootPart.Position  -- Get position after jump delay
-    smoothMove(startPos, targetPosition, speed)
+    -- Gunakan smoothMoveJump untuk trajektori melengkung
+    smoothMoveJump(startPos, targetPosition, speed, jumpHeight)
     
     print("✅ Selesai lompat")
     humanoid.WalkSpeed = 16
-    humanoid.JumpPower = 50
     AnimTracks["Jump"]:Stop()
 end
 
@@ -171,10 +256,28 @@ function StopMovement()
             track:Stop()
         end
     end
+    
+    -- Reset camera ke mode normal
+    camera.CameraType = Enum.CameraType.Custom
+    
     print("⏹️ Movement stop")
 end
 
+-- Fungsi untuk reset kamera
+function ResetCamera()
+    camera.CameraType = Enum.CameraType.Custom
+    print("📷 Kamera direset ke mode normal")
+end
+
 -- Auto-run
-print("🚀 Autoplay script loaded with Animations!")
+print("🚀 Autoplay script loaded with Animations & Camera Control!")
+print("📋 Available functions:")
+print("   - Jalan(x, y, z)")
+print("   - Lompat(x, y, z)")
+print("   - Lari(x, y, z)")
+print("   - RunMovementSequence()")
+print("   - ResetPosition()")
+print("   - StopMovement()")
+print("   - ResetCamera()")
 wait(3)
 RunMovementSequence()
