@@ -11,8 +11,18 @@ local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local camera = workspace.CurrentCamera
 
--- ====== RAYFIELD UI LIBRARY ======
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- ====== RAYFIELD UI LIBRARY ==-- ====== AUTO START ======
+print("🏔️ Summit Control UI Loaded!")
+print("📱 Compact interface ready")
+print("📍 Position: -958, 171, 875")
+
+-- Show initial notification
+Rayfield:Notify({
+    Title = "🏔️ Ready!",
+    Content = "Compact UI loaded",
+    Duration = 2,
+    Image = "mountain"
+})= loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- ====== UI VARIABLES ======
 local UISettings = {
@@ -24,9 +34,9 @@ local UISettings = {
 
 -- ====== CREATE UI WINDOW ======
 local Window = Rayfield:CreateWindow({
-    Name = "🏔️ Summit Test Controller",
-    LoadingTitle = "Summit Auto Route",
-    LoadingSubtitle = "by Roblox Script",
+    Name = "🏔️ Summit Control",
+    LoadingTitle = "Summit Auto",
+    LoadingSubtitle = "Compact UI",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = nil,
@@ -34,47 +44,38 @@ local Window = Rayfield:CreateWindow({
     },
     Discord = {
         Enabled = false,
-        Invite = "noinvitelink",
-        RememberJoins = true
     },
     KeySystem = false,
-    KeySettings = {
-        Title = "Untitled",
-        Subtitle = "Key System",
-        Note = "No method of obtaining the key is provided",
-        FileName = "Key",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = {"Hello"}
-    }
+    Size = UDim2.fromOffset(460, 360), -- Smaller window size
+    Position = UDim2.fromScale(0.5, 0.5), -- Center position
+    MinimizeKey = Enum.KeyCode.LeftControl, -- Minimize with Ctrl
 })
 
 -- ====== CREATE UI TABS ======
-local MainTab = Window:CreateTab("🎮 Controls", "play")
-local SettingsTab = Window:CreateTab("⚙️ Settings", "settings")
-local InfoTab = Window:CreateTab("📊 Info", "info")
+local MainTab = Window:CreateTab("🎮 Control", "play")
+local SettingsTab = Window:CreateTab("⚙️ Config", "settings")
 
--- ====== MAIN CONTROLS ======
-local MainSection = MainTab:CreateSection("🏔️ Summit Route Controls")
+-- ====== MAIN CONTROLS (COMPACT) ======
+local ControlSection = MainTab:CreateSection("Route Controls")
 
 local PlayButton = MainTab:CreateButton({
-    Name = "▶️ Start Summit Route",
+    Name = "▶️ Start Route",
     Callback = function()
         if not UISettings.isRunning then
             UISettings.isRunning = true
             UISettings.isPaused = false
             Rayfield:Notify({
-                Title = "🎮 Route Started",
-                Content = "Summit Base -> CP 1 route is running!",
-                Duration = 3,
+                Title = "▶️ Started",
+                Content = "Route running!",
+                Duration = 2,
                 Image = "play"
             })
             RunSummitTest()
         else
             Rayfield:Notify({
-                Title = "⚠️ Already Running",
-                Content = "Route is already in progress!",
-                Duration = 2,
+                Title = "⚠️ Running",
+                Content = "Already in progress!",
+                Duration = 1,
                 Image = "alert-triangle"
             })
         end
@@ -82,88 +83,66 @@ local PlayButton = MainTab:CreateButton({
 })
 
 local PauseButton = MainTab:CreateButton({
-    Name = "⏸️ Pause Movement",
+    Name = "⏸️ Pause",
     Callback = function()
         UISettings.isPaused = true
         StopMovement()
         Rayfield:Notify({
             Title = "⏸️ Paused",
-            Content = "Movement has been paused",
-            Duration = 2,
+            Content = "Movement paused",
+            Duration = 1,
             Image = "pause"
         })
     end,
 })
 
 local ResetButton = MainTab:CreateButton({
-    Name = "🔄 Reset to Start",
+    Name = "🔄 Reset",
     Callback = function()
         UISettings.isRunning = false
         UISettings.isPaused = false
         StopMovement()
         TeleportToStart()
         Rayfield:Notify({
-            Title = "🔄 Reset Complete",
-            Content = "Teleported to starting position",
-            Duration = 2,
+            Title = "🔄 Reset",
+            Content = "Back to start",
+            Duration = 1,
             Image = "refresh-ccw"
         })
     end,
 })
 
-local StopButton = MainTab:CreateButton({
-    Name = "⏹️ Emergency Stop",
-    Callback = function()
-        UISettings.isRunning = false
-        UISettings.isPaused = false
-        StopMovement()
-        Rayfield:Notify({
-            Title = "⏹️ Emergency Stop",
-            Content = "All movement stopped immediately",
-            Duration = 2,
-            Image = "square"
-        })
-    end,
-})
+-- ====== COMPACT STATUS ======
+local StatusSection = MainTab:CreateSection("Status")
+local StatusLabel = MainTab:CreateLabel("Status: Ready")
+local PosLabel = MainTab:CreateLabel("Position: Waiting...")
 
--- ====== SETTINGS CONTROLS ======
-local SettingsSection = SettingsTab:CreateSection("⚙️ Movement Settings")
+-- ====== COMPACT SETTINGS ======
+local ConfigSection = SettingsTab:CreateSection("Movement Config")
 
 local SpeedSlider = SettingsTab:CreateSlider({
-    Name = "🏃 Running Speed",
-    Range = {5, 30},
+    Name = "🏃 Speed",
+    Range = {8, 25},
     Increment = 1,
-    Suffix = " studs/s",
+    Suffix = "",
     CurrentValue = UISettings.speed,
     Flag = "RunSpeed",
     Callback = function(Value)
         UISettings.speed = Value
         MOVEMENT_CONFIG.lari.speed = Value
-        Rayfield:Notify({
-            Title = "🏃 Speed Updated",
-            Content = "Running speed set to " .. Value,
-            Duration = 1,
-            Image = "zap"
-        })
     end,
 })
 
 local JumpSlider = SettingsTab:CreateSlider({
-    Name = "🦘 Jump Height",
-    Range = {5, 20},
+    Name = "🦘 Jump",
+    Range = {6, 15},
     Increment = 1,
-    Suffix = " studs",
+    Suffix = "",
     CurrentValue = UISettings.jumpHeight,
     Flag = "JumpHeight",
     Callback = function(Value)
         UISettings.jumpHeight = Value
         MOVEMENT_CONFIG.lompat.jumpHeight = Value
-        Rayfield:Notify({
-            Title = "🦘 Jump Updated",
-            Content = "Jump height set to " .. Value,
-            Duration = 1,
-            Image = "arrow-up"
-        })
     end,
 })
 
@@ -174,48 +153,31 @@ local CameraToggle = SettingsTab:CreateToggle({
     Callback = function(Value)
         if Value then
             EnableCameraFollow()
-            Rayfield:Notify({
-                Title = "📷 Camera Follow ON",
-                Content = "Camera will follow player",
-                Duration = 1,
-                Image = "camera"
-            })
         else
             ResetCamera()
-            Rayfield:Notify({
-                Title = "📷 Camera Follow OFF",
-                Content = "Camera reset to normal",
-                Duration = 1,
-                Image = "camera-off"
-            })
         end
     end,
 })
 
--- ====== INFO TAB ======
-local InfoSection = InfoTab:CreateSection("📊 Route Information")
-
-InfoTab:CreateParagraph({
-    Title = "🗺️ Summit Route: Base -> CP 1",
-    Content = "This route consists of 6 movement steps:\n\n1. Run to checkpoint (-878, 179, 851)\n2. Jump down to platform (-864, 171, 850)\n3. Run to middle area (-791, 171, 850)\n4. Jump to small platform (-783, 172, 851)\n5. Run to final area (-743, 172, 850)\n6. Final jump to CP 1 (-732, 178, 848)"
+-- ====== COMPACT INFO ======
+SettingsTab:CreateParagraph({
+    Title = "� Route Info",
+    Content = "Base -> CP 1 (6 steps)\nStart: -958, 171, 875\nEnd: -732, 178, 848"
 })
 
-local StatusLabel = InfoTab:CreateLabel("Status: Ready")
-local CoordinatesLabel = InfoTab:CreateLabel("Current Position: Waiting...")
-
--- Update labels periodically
+-- ====== COMPACT STATUS UPDATER ======
 spawn(function()
     while true do
         wait(1)
         if rootPart then
             local pos = rootPart.Position
-            CoordinatesLabel:Set("Current Position: " .. 
+            PosLabel:Set("Pos: " .. 
                 math.floor(pos.X) .. ", " .. 
                 math.floor(pos.Y) .. ", " .. 
                 math.floor(pos.Z))
             
             if UISettings.isRunning and not UISettings.isPaused then
-                StatusLabel:Set("Status: 🏃 Running Route")
+                StatusLabel:Set("Status: 🏃 Running")
             elseif UISettings.isPaused then
                 StatusLabel:Set("Status: ⏸️ Paused")
             else
@@ -299,10 +261,10 @@ end
 -- ====== CONFIG MOVEMENT ======
 local MOVEMENT_CONFIG = {
     lari = {
-        speed = 18,  -- Lebih cepat untuk summit
+        speed = 25,  -- Lebih cepat untuk summit
     },
     lompat = {
-        speed = 12,
+        speed = 20,
         jumpHeight = 10
     }
 }
