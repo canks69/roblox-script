@@ -11,7 +11,7 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local UISettings = {
-    speed = 15,
+    speed = 30,
     jumpHeight = 10,
     isPaused = false,
     isRunning = false
@@ -64,8 +64,8 @@ Tab:CreateButton({
 -- ====== MINI SLIDERS ======
 Tab:CreateSlider({
     Name = "Speed",
-    Range = {12, 18},
-    Increment = 1,
+    Range = {20, 40},
+    Increment = 2,
     CurrentValue = UISettings.speed,
     Callback = function(Value)
         UISettings.speed = Value
