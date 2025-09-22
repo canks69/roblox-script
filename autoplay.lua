@@ -50,32 +50,51 @@ local function faceDirection(targetPos)
     end
 end
 
--- Fungsi untuk smooth camera follow player
-local function smoothCameraFollowPlayer(cameraOffset, lookAtPlayer)
+-- Fungsi untuk smooth camera follow player dengan user control
+local function smoothCameraFollowPlayer(cameraOffset, enableUserControl)
     cameraOffset = cameraOffset or Vector3.new(0, 5, 8)
-    lookAtPlayer = lookAtPlayer or true
+    enableUserControl = enableUserControl or true
     
-    camera.CameraType = Enum.CameraType.Scriptable
-    
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if rootPart then
-            local playerPos = rootPart.Position
-            local targetCameraPos = playerPos + cameraOffset
-            
-            if lookAtPlayer then
-                camera.CFrame = CFrame.lookAt(targetCameraPos, playerPos)
-            else
-                camera.CFrame = CFrame.new(targetCameraPos)
+    if enableUserControl then
+        -- Gunakan Custom mode agar user bisa zoom/rotate
+        camera.CameraType = Enum.CameraType.Custom
+        camera.CameraSubject = humanoid
+        
+        -- Set camera focus ke player tapi allow user control
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if rootPart then
+                -- Set camera subject agar mengikuti player
+                if camera.CameraSubject ~= humanoid then
+                    camera.CameraSubject = humanoid
+                end
             end
-        end
-    end)
-    
-    return connection
+        end)
+        
+        return connection
+    else
+        -- Mode scriptable untuk full control (no user input)
+        camera.CameraType = Enum.CameraType.Scriptable
+        
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if rootPart then
+                local playerPos = rootPart.Position
+                local targetCameraPos = playerPos + cameraOffset
+                camera.CFrame = CFrame.lookAt(targetCameraPos, playerPos)
+            end
+        end)
+        
+        return connection
+    end
 end
 
--- Variable untuk camera connection
+-- Variable untuk camera connection dan settings
 local cameraConnection = nil
+local cameraSettings = {
+    enableUserControl = true,
+    defaultOffset = Vector3.new(0, 5, 8)
+}
 
 -- ====== CONFIG MOVEMENT ======
 local MOVEMENT_CONFIG = {
@@ -106,11 +125,11 @@ local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
     -- Set orientasi karakter menghadap target
     faceDirection(endPos)
     
-    -- Start camera follow player
+    -- Start camera follow player dengan user control
     if cameraConnection then
         cameraConnection:Disconnect()
     end
-    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 6, 10), true)
+    cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
@@ -155,11 +174,11 @@ local function smoothMove(startPos, endPos, speed)
     -- Set orientasi karakter menghadap target
     faceDirection(endPos)
     
-    -- Start camera follow player
+    -- Start camera follow player dengan user control
     if cameraConnection then
         cameraConnection:Disconnect()
     end
-    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 5, 8), true)
+    cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
@@ -283,6 +302,7 @@ function StopMovement()
         cameraConnection = nil
     end
     camera.CameraType = Enum.CameraType.Custom
+    camera.CameraSubject = humanoid
     
     print("⏹️ Movement stop")
 end
@@ -294,28 +314,72 @@ function ResetCamera()
         cameraConnection = nil
     end
     camera.CameraType = Enum.CameraType.Custom
+    camera.CameraSubject = humanoid
     print("📷 Kamera direset ke mode normal")
 end
 
--- Fungsi untuk enable camera follow manual
+-- Fungsi untuk enable camera follow manual dengan user control
 function EnableCameraFollow()
     if cameraConnection then
         cameraConnection:Disconnect()
     end
-    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 5, 8), true)
-    print("📷 Camera follow diaktifkan")
+    cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
+    print("📷 Camera follow diaktifkan (bisa zoom & rotate)")
+end
+
+-- Fungsi untuk toggle user control pada kamera
+function ToggleCameraControl()
+    cameraSettings.enableUserControl = not cameraSettings.enableUserControl
+    
+    if cameraSettings.enableUserControl then
+        print("📱 User camera control ENABLED (bisa zoom & rotate)")
+    else
+        print("🔒 User camera control DISABLED (fixed view)")
+    end
+    
+    -- Restart camera follow dengan setting baru
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
+    end
+end
+
+-- Fungsi untuk set camera mode scriptable (full control, no user input)
+function SetScriptableCamera()
+    cameraSettings.enableUserControl = false
+    if cameraConnection then
+        cameraConnection:Disconnect()
+    end
+    cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, false)
+    print("🎬 Camera mode: Scriptable (no user control)")
+end
+
+-- Fungsi untuk set camera mode custom (allow user input)
+function SetCustomCamera()
+    cameraSettings.enableUserControl = true
+    if cameraConnection then
+        cameraConnection:Disconnect()
+    end
+    cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, true)
+    print("📱 Camera mode: Custom (user control enabled)")
 end
 
 -- Auto-run
-print("🚀 Autoplay script loaded with Animations & Camera Follow!")
+print("🚀 Autoplay script loaded with Interactive Camera Follow!")
 print("📋 Available functions:")
+print("   🚶 Movement:")
 print("   - Jalan(x, y, z)")
 print("   - Lompat(x, y, z)")
 print("   - Lari(x, y, z)")
 print("   - RunMovementSequence()")
 print("   - ResetPosition()")
 print("   - StopMovement()")
+print("   📷 Camera Control:")
 print("   - ResetCamera()")
 print("   - EnableCameraFollow()")
+print("   - ToggleCameraControl()")
+print("   - SetScriptableCamera()")
+print("   - SetCustomCamera()")
+print("   📱 User controls: Zoom & Rotate enabled by default!")
 wait(3)
 RunMovementSequence()
