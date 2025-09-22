@@ -50,18 +50,32 @@ local function faceDirection(targetPos)
     end
 end
 
--- Fungsi untuk smooth camera follow
-local function smoothCameraFollow(targetPos, cameraOffset)
+-- Fungsi untuk smooth camera follow player
+local function smoothCameraFollowPlayer(cameraOffset, lookAtPlayer)
     cameraOffset = cameraOffset or Vector3.new(0, 5, 8)
-    
-    local targetCameraPos = targetPos + cameraOffset
+    lookAtPlayer = lookAtPlayer or true
     
     camera.CameraType = Enum.CameraType.Scriptable
-    local cameraTween = TweenService:Create(camera, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
-        CFrame = CFrame.lookAt(targetCameraPos, targetPos)
-    })
-    cameraTween:Play()
+    
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if rootPart then
+            local playerPos = rootPart.Position
+            local targetCameraPos = playerPos + cameraOffset
+            
+            if lookAtPlayer then
+                camera.CFrame = CFrame.lookAt(targetCameraPos, playerPos)
+            else
+                camera.CFrame = CFrame.new(targetCameraPos)
+            end
+        end
+    end)
+    
+    return connection
 end
+
+-- Variable untuk camera connection
+local cameraConnection = nil
 
 -- ====== CONFIG MOVEMENT ======
 local MOVEMENT_CONFIG = {
@@ -92,8 +106,11 @@ local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
     -- Set orientasi karakter menghadap target
     faceDirection(endPos)
     
-    -- Set camera follow target
-    smoothCameraFollow(endPos)
+    -- Start camera follow player
+    if cameraConnection then
+        cameraConnection:Disconnect()
+    end
+    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 6, 10), true)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
@@ -138,8 +155,11 @@ local function smoothMove(startPos, endPos, speed)
     -- Set orientasi karakter menghadap target
     faceDirection(endPos)
     
-    -- Set camera follow target
-    smoothCameraFollow(endPos)
+    -- Start camera follow player
+    if cameraConnection then
+        cameraConnection:Disconnect()
+    end
+    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 5, 8), true)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
@@ -257,7 +277,11 @@ function StopMovement()
         end
     end
     
-    -- Reset camera ke mode normal
+    -- Stop camera follow dan reset ke mode normal
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
     camera.CameraType = Enum.CameraType.Custom
     
     print("⏹️ Movement stop")
@@ -265,12 +289,25 @@ end
 
 -- Fungsi untuk reset kamera
 function ResetCamera()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
     camera.CameraType = Enum.CameraType.Custom
     print("📷 Kamera direset ke mode normal")
 end
 
+-- Fungsi untuk enable camera follow manual
+function EnableCameraFollow()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+    end
+    cameraConnection = smoothCameraFollowPlayer(Vector3.new(0, 5, 8), true)
+    print("📷 Camera follow diaktifkan")
+end
+
 -- Auto-run
-print("🚀 Autoplay script loaded with Animations & Camera Control!")
+print("🚀 Autoplay script loaded with Animations & Camera Follow!")
 print("📋 Available functions:")
 print("   - Jalan(x, y, z)")
 print("   - Lompat(x, y, z)")
@@ -279,5 +316,6 @@ print("   - RunMovementSequence()")
 print("   - ResetPosition()")
 print("   - StopMovement()")
 print("   - ResetCamera()")
+print("   - EnableCameraFollow()")
 wait(3)
 RunMovementSequence()
