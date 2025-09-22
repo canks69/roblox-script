@@ -168,7 +168,7 @@ end
 -- UI Elements
 local MainTab = Window:CreateTab("🎮 Control")
 local SettingsTab = Window:CreateTab("⚙️ Settings")
-local FeaturesTab = Window:CreateTab("✨ Features")
+local TeleportTab = Window:CreateTab("📍 Teleport")
 
 -- Status Display
 local StatusLabel = MainTab:CreateLabel("📊 Status: Ready")
@@ -461,97 +461,6 @@ local ResetButton = MainTab:CreateButton({
     end,
 })
 
--- Features Tab
-local SkipSection = FeaturesTab:CreateSection("⚡ Skip Options")
-
--- Skip Checkpoints Toggle
-local SkipToggle = FeaturesTab:CreateToggle({
-    Name = "⚡ Skip Checkpoints (Direct to Summit)",
-    CurrentValue = false,
-    Flag = "SkipCheckpointsToggle",
-    Callback = function(Value)
-        skipCheckpoints = Value
-        if skipCheckpoints then
-            print("⚡ Skip mode enabled - will teleport directly to summit!")
-        else
-            print("📍 Normal mode - will visit all checkpoints")
-        end
-        updateStatus()
-    end,
-})
-
--- Teleport Mode Section
-local TeleportModeSection = FeaturesTab:CreateSection("🚀 Teleport Mode")
-
--- Instant Teleport Toggle
-local InstantTeleportToggle = FeaturesTab:CreateToggle({
-    Name = "⚡ Instant Teleport (Recommended)",
-    CurrentValue = true,
-    Flag = "InstantTeleportToggle",
-    Callback = function(Value)
-        useInstantTeleport = Value
-        if useInstantTeleport then
-            print("⚡ Instant teleport enabled - immediate teleportation!")
-        else
-            print("🎬 Smooth teleport enabled - animated movement")
-        end
-    end,
-})
-
--- Auto Respawn Section
-local RespawnSection = FeaturesTab:CreateSection("💀 Respawn Options")
-
--- Auto Respawn Toggle
-local RespawnToggle = FeaturesTab:CreateToggle({
-    Name = "💀 Auto Respawn at Summit",
-    CurrentValue = false,
-    Flag = "AutoRespawnToggle",
-    Callback = function(Value)
-        autoRespawn = Value
-        if autoRespawn then
-            print("💀 Auto respawn enabled - will respawn after reaching summit")
-        else
-            print("🏠 Normal mode - will return to base after summit")
-        end
-    end,
-})
-
--- Loop Section
-local LoopSection = FeaturesTab:CreateSection("🔄 Loop Options")
-
--- Infinite Loop Toggle
-local InfiniteToggle = FeaturesTab:CreateToggle({
-    Name = "♾️ Infinite Loop",
-    CurrentValue = false,
-    Flag = "InfiniteLoopToggle",
-    Callback = function(Value)
-        infiniteLoop = Value
-        if infiniteLoop then
-            print("♾️ Infinite loop enabled - will run forever!")
-        else
-            print("🔢 Finite loop - will use specified count")
-        end
-        updateStatus()
-    end,
-})
-
--- Loop Count Slider
-local LoopSlider = FeaturesTab:CreateSlider({
-    Name = "🔢 Number of Loops",
-    Range = {1, 100},
-    Increment = 1,
-    Suffix = " loops",
-    CurrentValue = 1,
-    Flag = "LoopCountSlider",
-    Callback = function(Value)
-        loopCount = Value
-        if not infiniteLoop then
-            print("🔢 Loop count set to " .. Value .. " loops")
-        end
-        updateStatus()
-    end,
-})
-
 -- Settings Section
 local ConfigSection = SettingsTab:CreateSection("⚙️ Movement Settings")
 
@@ -597,11 +506,102 @@ local LiftSlider = SettingsTab:CreateSlider({
     end,
 })
 
--- Manual Teleport Section
-local TeleportSection = SettingsTab:CreateSection("📍 Manual Teleport")
+-- Skip Options Section
+local SkipSection = SettingsTab:CreateSection("⚡ Skip Options")
+
+-- Skip Checkpoints Toggle
+local SkipToggle = SettingsTab:CreateToggle({
+    Name = "⚡ Skip Checkpoints (Direct to Summit)",
+    CurrentValue = false,
+    Flag = "SkipCheckpointsToggle",
+    Callback = function(Value)
+        skipCheckpoints = Value
+        if skipCheckpoints then
+            print("⚡ Skip mode enabled - will teleport directly to summit!")
+        else
+            print("📍 Normal mode - will visit all checkpoints")
+        end
+        updateStatus()
+    end,
+})
+
+-- Teleport Mode Section
+local TeleportModeSection = SettingsTab:CreateSection("🚀 Teleport Mode")
+
+-- Instant Teleport Toggle
+local InstantTeleportToggle = SettingsTab:CreateToggle({
+    Name = "⚡ Instant Teleport (Recommended)",
+    CurrentValue = true,
+    Flag = "InstantTeleportToggle",
+    Callback = function(Value)
+        useInstantTeleport = Value
+        if useInstantTeleport then
+            print("⚡ Instant teleport enabled - immediate teleportation!")
+        else
+            print("🎬 Smooth teleport enabled - animated movement")
+        end
+    end,
+})
+
+-- Auto Respawn Section
+local RespawnSection = SettingsTab:CreateSection("💀 Respawn Options")
+
+-- Auto Respawn Toggle
+local RespawnToggle = SettingsTab:CreateToggle({
+    Name = "💀 Auto Respawn at Summit",
+    CurrentValue = false,
+    Flag = "AutoRespawnToggle",
+    Callback = function(Value)
+        autoRespawn = Value
+        if autoRespawn then
+            print("💀 Auto respawn enabled - will respawn after reaching summit")
+        else
+            print("🏠 Normal mode - will return to base after summit")
+        end
+    end,
+})
+
+-- Loop Section
+local LoopSection = SettingsTab:CreateSection("🔄 Loop Options")
+
+-- Infinite Loop Toggle
+local InfiniteToggle = SettingsTab:CreateToggle({
+    Name = "♾️ Infinite Loop",
+    CurrentValue = false,
+    Flag = "InfiniteLoopToggle",
+    Callback = function(Value)
+        infiniteLoop = Value
+        if infiniteLoop then
+            print("♾️ Infinite loop enabled - will run forever!")
+        else
+            print("🔢 Finite loop - will use specified count")
+        end
+        updateStatus()
+    end,
+})
+
+-- Loop Count Slider
+local LoopSlider = SettingsTab:CreateSlider({
+    Name = "🔢 Number of Loops",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = " loops",
+    CurrentValue = 1,
+    Flag = "LoopCountSlider",
+    Callback = function(Value)
+        loopCount = Value
+        if not infiniteLoop then
+            print("🔢 Loop count set to " .. Value .. " loops")
+        end
+        updateStatus()
+    end,
+})
+
+-- Teleport Tab Content
+local BaseSection = TeleportTab:CreateSection("🏠 Base & Summit")
 
 -- Base and Summit
-local TeleportBaseButton = SettingsTab:CreateButton({
+local TeleportBaseButton = TeleportTab:CreateButton({
     Name = "🏠 Teleport to Base",
     Callback = function()
         if HumanoidRootPart then
@@ -611,8 +611,8 @@ local TeleportBaseButton = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportSummitButton = SettingsTab:CreateButton({
-    Name = "�️ Teleport to Summit",
+local TeleportSummitButton = TeleportTab:CreateButton({
+    Name = "🏔️ Teleport to Summit",
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.summit)
@@ -621,8 +621,10 @@ local TeleportSummitButton = SettingsTab:CreateButton({
     end,
 })
 
--- All Checkpoints CP1-CP14
-local TeleportCP1Button = SettingsTab:CreateButton({
+-- Checkpoints Section 1 (CP1-CP5)
+local CP1to5Section = TeleportTab:CreateSection("📍 Checkpoints 1-5")
+
+local TeleportCP1Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP1",
     Callback = function()
         if HumanoidRootPart then
@@ -632,7 +634,7 @@ local TeleportCP1Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP2Button = SettingsTab:CreateButton({
+local TeleportCP2Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP2",
     Callback = function()
         if HumanoidRootPart then
@@ -642,7 +644,7 @@ local TeleportCP2Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP3Button = SettingsTab:CreateButton({
+local TeleportCP3Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP3",
     Callback = function()
         if HumanoidRootPart then
@@ -652,7 +654,7 @@ local TeleportCP3Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP4Button = SettingsTab:CreateButton({
+local TeleportCP4Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP4",
     Callback = function()
         if HumanoidRootPart then
@@ -662,7 +664,7 @@ local TeleportCP4Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP5Button = SettingsTab:CreateButton({
+local TeleportCP5Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP5",
     Callback = function()
         if HumanoidRootPart then
@@ -672,7 +674,10 @@ local TeleportCP5Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP6Button = SettingsTab:CreateButton({
+-- Checkpoints Section 2 (CP6-CP10)
+local CP6to10Section = TeleportTab:CreateSection("📍 Checkpoints 6-10")
+
+local TeleportCP6Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP6",
     Callback = function()
         if HumanoidRootPart then
@@ -682,7 +687,7 @@ local TeleportCP6Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP7Button = SettingsTab:CreateButton({
+local TeleportCP7Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP7",
     Callback = function()
         if HumanoidRootPart then
@@ -692,7 +697,7 @@ local TeleportCP7Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP8Button = SettingsTab:CreateButton({
+local TeleportCP8Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP8",
     Callback = function()
         if HumanoidRootPart then
@@ -702,7 +707,7 @@ local TeleportCP8Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP9Button = SettingsTab:CreateButton({
+local TeleportCP9Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP9",
     Callback = function()
         if HumanoidRootPart then
@@ -712,7 +717,7 @@ local TeleportCP9Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP10Button = SettingsTab:CreateButton({
+local TeleportCP10Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP10",
     Callback = function()
         if HumanoidRootPart then
@@ -722,7 +727,10 @@ local TeleportCP10Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP11Button = SettingsTab:CreateButton({
+-- Checkpoints Section 3 (CP11-CP14)
+local CP11to14Section = TeleportTab:CreateSection("📍 Checkpoints 11-14")
+
+local TeleportCP11Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP11",
     Callback = function()
         if HumanoidRootPart then
@@ -732,7 +740,7 @@ local TeleportCP11Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP12Button = SettingsTab:CreateButton({
+local TeleportCP12Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP12",
     Callback = function()
         if HumanoidRootPart then
@@ -742,7 +750,7 @@ local TeleportCP12Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP13Button = SettingsTab:CreateButton({
+local TeleportCP13Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP13",
     Callback = function()
         if HumanoidRootPart then
@@ -752,12 +760,89 @@ local TeleportCP13Button = SettingsTab:CreateButton({
     end,
 })
 
-local TeleportCP14Button = SettingsTab:CreateButton({
+local TeleportCP14Button = TeleportTab:CreateButton({
     Name = "📍 Teleport to CP14",
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp14)
             print("📍 Instantly teleported to CP14")
+        end
+    end,
+})
+
+-- Advanced Teleport Features
+local AdvancedSection = TeleportTab:CreateSection("⚡ Advanced Teleport")
+
+-- Sequential Teleport (Go through checkpoints one by one manually)
+local SequentialTeleportButton = TeleportTab:CreateButton({
+    Name = "🔄 Next Checkpoint",
+    Callback = function()
+        if HumanoidRootPart then
+            local nextIndex = currentIndex + 1
+            if nextIndex > #checkpointOrder then
+                nextIndex = 1
+            end
+            local nextCP = checkpointOrder[nextIndex]
+            local nextPos = coordinates[nextCP]
+            if nextPos then
+                instantTeleport(nextPos)
+                currentIndex = nextIndex
+                print("🔄 Teleported to next checkpoint: " .. string.upper(nextCP))
+                updateStatus()
+            end
+        end
+    end,
+})
+
+-- Previous Checkpoint
+local PreviousTeleportButton = TeleportTab:CreateButton({
+    Name = "⏮️ Previous Checkpoint",
+    Callback = function()
+        if HumanoidRootPart then
+            local prevIndex = currentIndex - 1
+            if prevIndex < 1 then
+                prevIndex = #checkpointOrder
+            end
+            local prevCP = checkpointOrder[prevIndex]
+            local prevPos = coordinates[prevCP]
+            if prevPos then
+                instantTeleport(prevPos)
+                currentIndex = prevIndex
+                print("⏮️ Teleported to previous checkpoint: " .. string.upper(prevCP))
+                updateStatus()
+            end
+        end
+    end,
+})
+
+-- Random Teleport
+local RandomTeleportButton = TeleportTab:CreateButton({
+    Name = "🎲 Random Checkpoint",
+    Callback = function()
+        if HumanoidRootPart then
+            local randomIndex = math.random(1, #checkpointOrder)
+            local randomCP = checkpointOrder[randomIndex]
+            local randomPos = coordinates[randomCP]
+            if randomPos then
+                instantTeleport(randomPos)
+                print("🎲 Randomly teleported to: " .. string.upper(randomCP))
+            end
+        end
+    end,
+})
+
+-- Teleport to Current Position (for testing)
+local CurrentPositionButton = TeleportTab:CreateButton({
+    Name = "📌 Get Current Position",
+    Callback = function()
+        if HumanoidRootPart then
+            local pos = HumanoidRootPart.Position
+            print("📌 Current Position: X=" .. math.floor(pos.X) .. ", Y=" .. math.floor(pos.Y) .. ", Z=" .. math.floor(pos.Z))
+            -- Copy to clipboard if possible
+            if setclipboard then
+                setclipboard("Vector3.new(" .. math.floor(pos.X) .. ", " .. math.floor(pos.Y) .. ", " .. math.floor(pos.Z) .. ")")
+                print("📋 Position copied to clipboard!")
+            end
         end
     end,
 })
