@@ -46,7 +46,7 @@ local Window = Rayfield:CreateWindow({
         Enabled = false,
     },
     KeySystem = false,
-    Size = UDim2.fromOffset(460, 360), -- Smaller window size
+    Size = UDim2.fromOffset(260, 260), -- Smaller window size
     Position = UDim2.fromScale(0.5, 0.5), -- Center position
     MinimizeKey = Enum.KeyCode.LeftControl, -- Minimize with Ctrl
 })
