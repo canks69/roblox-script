@@ -96,6 +96,19 @@ local cameraSettings = {
     defaultOffset = Vector3.new(0, 5, 8)
 }
 
+-- Variable untuk movement connections
+local currentMovementConnection = nil
+local isMoving = false
+
+-- Fungsi untuk stop current movement
+local function stopCurrentMovement()
+    if currentMovementConnection then
+        currentMovementConnection:Disconnect()
+        currentMovementConnection = nil
+    end
+    isMoving = false
+end
+
 -- ====== CONFIG MOVEMENT ======
 local MOVEMENT_CONFIG = {
     jalan = {
@@ -116,6 +129,9 @@ local MOVEMENT_CONFIG = {
 
 -- Fungsi untuk smooth move dengan jump arc
 local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
+    -- Stop movement sebelumnya jika ada
+    stopCurrentMovement()
+    
     local distance = (endPos - startPos).Magnitude
     local duration = distance / speed
     local startTime = tick()
@@ -130,9 +146,13 @@ local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
         cameraConnection:Disconnect()
     end
     cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
+    
+    isMoving = true
+    currentMovementConnection = RunService.Heartbeat:Connect(function()
+        if not isMoving then
+            return
+        end
+        
         local elapsed = tick() - startTime
         local alpha = math.clamp(elapsed / duration, 0, 1)
         
@@ -158,15 +178,21 @@ local function smoothMoveJump(startPos, endPos, speed, jumpHeight)
             end
         end
         if alpha >= 1 then
-            connection:Disconnect()
+            currentMovementConnection:Disconnect()
+            currentMovementConnection = nil
+            isMoving = false
         end
     end)
 
-    task.wait(duration + 0.05)
+    -- Reduced wait time untuk response yang lebih cepat
+    task.wait(duration + 0.01)
 end
 
 -- Fungsi untuk smooth move menggunakan RunService.Heartbeat
 local function smoothMove(startPos, endPos, speed)
+    -- Stop movement sebelumnya jika ada
+    stopCurrentMovement()
+    
     local distance = (endPos - startPos).Magnitude
     local duration = distance / speed
     local startTime = tick()
@@ -179,9 +205,13 @@ local function smoothMove(startPos, endPos, speed)
         cameraConnection:Disconnect()
     end
     cameraConnection = smoothCameraFollowPlayer(cameraSettings.defaultOffset, cameraSettings.enableUserControl)
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
+    
+    isMoving = true
+    currentMovementConnection = RunService.Heartbeat:Connect(function()
+        if not isMoving then
+            return
+        end
+        
         local elapsed = tick() - startTime
         local alpha = math.clamp(elapsed / duration, 0, 1)
         local newPos = startPos:Lerp(endPos, alpha)
@@ -197,11 +227,14 @@ local function smoothMove(startPos, endPos, speed)
             end
         end
         if alpha >= 1 then
-            connection:Disconnect()
+            currentMovementConnection:Disconnect()
+            currentMovementConnection = nil
+            isMoving = false
         end
     end)
 
-    task.wait(duration + 0.05)
+    -- Reduced wait time untuk response yang lebih cepat
+    task.wait(duration + 0.01)
 end
 
 -- ====== JALAN ======
@@ -268,16 +301,44 @@ function RunMovementSequence()
     local lompatKe = {-28, 4, -65}
     local lariKe = {-73, 4, -39}
     
-    -- Jalankan sequence berurutan
+    -- Jalankan sequence berurutan TANPA delay
     Jalan(jalankKe[1], jalankKe[2], jalankKe[3])
-    wait(1)
-    
+    -- Langsung lanjut tanpa wait
     Lompat(lompatKe[1], lompatKe[2], lompatKe[3])
-    wait(1)
-    
+    -- Langsung lanjut tanpa wait
     Lari(lariKe[1], lariKe[2], lariKe[3])
     
     print("🎉 Sequence selesai!")
+end
+
+-- Fungsi sequence dengan instant transition (no waiting)
+function RunInstantSequence()
+    print("⚡ Starting instant sequence...")
+    
+    local movements = {
+        {type = "Jalan", pos = {-25, 4, -60}},
+        {type = "Lompat", pos = {-28, 4, -65}},
+        {type = "Lari", pos = {-73, 4, -39}}
+    }
+    
+    for i, movement in ipairs(movements) do
+        print("🎯 " .. movement.type .. " ke: " .. table.concat(movement.pos, ", "))
+        
+        if movement.type == "Jalan" then
+            Jalan(movement.pos[1], movement.pos[2], movement.pos[3])
+        elseif movement.type == "Lompat" then
+            Lompat(movement.pos[1], movement.pos[2], movement.pos[3])
+        elseif movement.type == "Lari" then
+            Lari(movement.pos[1], movement.pos[2], movement.pos[3])
+        end
+        
+        -- Micro delay hanya untuk transisi animasi yang smooth
+        if i < #movements then
+            task.wait(0.1)
+        end
+    end
+    
+    print("⚡ Instant sequence selesai!")
 end
 
 -- ====== RESET & STOP ======
@@ -288,6 +349,9 @@ function ResetPosition()
 end
 
 function StopMovement()
+    -- Stop current movement
+    stopCurrentMovement()
+    
     humanoid.WalkSpeed = 0
     humanoid.Jump = false
     for _, track in pairs(AnimTracks) do
@@ -365,13 +429,14 @@ function SetCustomCamera()
 end
 
 -- Auto-run
-print("🚀 Autoplay script loaded with Interactive Camera Follow!")
+print("🚀 Autoplay script loaded with NO DELAY Movement!")
 print("📋 Available functions:")
 print("   🚶 Movement:")
 print("   - Jalan(x, y, z)")
 print("   - Lompat(x, y, z)")
 print("   - Lari(x, y, z)")
-print("   - RunMovementSequence()")
+print("   - RunMovementSequence() -- Original dengan transisi")
+print("   - RunInstantSequence() -- Instant, no delay!")
 print("   - ResetPosition()")
 print("   - StopMovement()")
 print("   📷 Camera Control:")
@@ -381,5 +446,6 @@ print("   - ToggleCameraControl()")
 print("   - SetScriptableCamera()")
 print("   - SetCustomCamera()")
 print("   📱 User controls: Zoom & Rotate enabled by default!")
+print("   ⚡ NO DELAY MODE: Movements transition instantly!")
 wait(3)
-RunMovementSequence()
+RunInstantSequence()
