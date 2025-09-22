@@ -55,44 +55,44 @@ local MOVEMENT_CONFIG = {
     }
 }
 
--- Fungsi untuk smooth move
-local function smoothMoveTo(targetPosition, movementType)
-    local config = MOVEMENT_CONFIG[movementType]
-    
-    humanoid.WalkSpeed = config.speed
-    
-    local tweenInfo = TweenInfo.new(
-        config.tweenTime,
-        Enum.EasingStyle.Quart,
-        Enum.EasingDirection.Out,
-        0,
-        false,
-        0
-    )
-    
-    local targetCFrame = CFrame.new(targetPosition)
-    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
-    
-    return tween
+-- Fungsi untuk smooth move menggunakan RunService.Heartbeat
+local function smoothMove(startPos, endPos, speed)
+    local distance = (endPos - startPos).Magnitude
+    local duration = distance / speed
+    local startTime = tick()
+
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local elapsed = tick() - startTime
+        local alpha = math.clamp(elapsed / duration, 0, 1)
+        local newPos = startPos:Lerp(endPos, alpha)
+        if rootPart then
+            rootPart.CFrame = CFrame.new(newPos)
+        end
+        if alpha >= 1 then
+            connection:Disconnect()
+        end
+    end)
+
+    task.wait(duration + 0.05)
 end
 
 -- ====== JALAN ======
 function Jalan(x, y, z)
     print("🚶 Jalan ke: " .. x .. ", " .. y .. ", " .. z)
     
+    local startPos = rootPart.Position
     local targetPosition = Vector3.new(x, y, z)
-    local tween = smoothMoveTo(targetPosition, "jalan")
+    local speed = MOVEMENT_CONFIG.jalan.speed
     
+    humanoid.WalkSpeed = speed
     PlayAnim("Walk")
     
-    tween:Play()
-    tween.Completed:Connect(function()
-        print("✅ Selesai jalan")
-        humanoid.WalkSpeed = 16
-        AnimTracks["Walk"]:Stop()
-    end)
+    smoothMove(startPos, targetPosition, speed)
     
-    return tween
+    print("✅ Selesai jalan")
+    humanoid.WalkSpeed = 16
+    AnimTracks["Walk"]:Stop()
 end
 
 -- ====== LOMPAT ======
@@ -100,45 +100,40 @@ function Lompat(x, y, z)
     print("🦘 Lompat ke: " .. x .. ", " .. y .. ", " .. z)
     
     local targetPosition = Vector3.new(x, y, z)
+    local speed = MOVEMENT_CONFIG.lompat.speed
     
     humanoid.Jump = true
     humanoid.JumpPower = MOVEMENT_CONFIG.lompat.jumpPower
+    humanoid.WalkSpeed = speed
     
     PlayAnim("Jump")
     
     wait(0.2)
-    local tween = smoothMoveTo(targetPosition, "lompat")
-    tween:Play()
+    local startPos = rootPart.Position  -- Get position after jump delay
+    smoothMove(startPos, targetPosition, speed)
     
-    tween.Completed:Connect(function()
-        print("✅ Selesai lompat")
-        humanoid.WalkSpeed = 16
-        humanoid.JumpPower = 50
-        AnimTracks["Jump"]:Stop()
-    end)
-    
-    return tween
+    print("✅ Selesai lompat")
+    humanoid.WalkSpeed = 16
+    humanoid.JumpPower = 50
+    AnimTracks["Jump"]:Stop()
 end
 
 -- ====== LARI ======
 function Lari(x, y, z)
     print("🏃 Lari ke: " .. x .. ", " .. y .. ", " .. z)
     
+    local startPos = rootPart.Position
     local targetPosition = Vector3.new(x, y, z)
-    local tween = smoothMoveTo(targetPosition, "lari")
+    local speed = MOVEMENT_CONFIG.lari.speed
     
-    humanoid.WalkSpeed = MOVEMENT_CONFIG.lari.speed
-    
+    humanoid.WalkSpeed = speed
     PlayAnim("Run")
     
-    tween:Play()
-    tween.Completed:Connect(function()
-        print("✅ Selesai lari")
-        humanoid.WalkSpeed = 16
-        AnimTracks["Run"]:Stop()
-    end)
+    smoothMove(startPos, targetPosition, speed)
     
-    return tween
+    print("✅ Selesai lari")
+    humanoid.WalkSpeed = 16
+    AnimTracks["Run"]:Stop()
 end
 
 -- ====== SEQUENCE ======
@@ -149,30 +144,23 @@ function RunMovementSequence()
     local lompatKe = {-28, 4, -65}
     local lariKe = {-73, 4, -39}
     
-    local jalanTween = Jalan(jalankKe[1], jalankKe[2], jalankKe[3])
+    -- Jalankan sequence berurutan
+    Jalan(jalankKe[1], jalankKe[2], jalankKe[3])
+    wait(1)
     
-    jalanTween.Completed:Connect(function()
-        wait(1)
-        local lompatTween = Lompat(lompatKe[1], lompatKe[2], lompatKe[3])
-        
-        lompatTween.Completed:Connect(function()
-            wait(1)
-            local lariTween = Lari(lariKe[1], lariKe[2], lariKe[3])
-            
-            lariTween.Completed:Connect(function()
-                print("🎉 Sequence selesai!")
-            end)
-        end)
-    end)
+    Lompat(lompatKe[1], lompatKe[2], lompatKe[3])
+    wait(1)
+    
+    Lari(lariKe[1], lariKe[2], lariKe[3])
+    
+    print("🎉 Sequence selesai!")
 end
 
 -- ====== RESET & STOP ======
 function ResetPosition()
     print("🔄 Reset posisi...")
-    local resetTween = Jalan(0, 8, 0)
-    resetTween.Completed:Connect(function()
-        print("✅ Reset selesai")
-    end)
+    Jalan(0, 8, 0)
+    print("✅ Reset selesai")
 end
 
 function StopMovement()
