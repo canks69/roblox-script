@@ -467,7 +467,7 @@ local SpeedSlider = Tab:CreateSlider({
 -- Teleport Delay Slider
 local DelaySlider = Tab:CreateSlider({
     Name = "TP Delay",
-    Range = {0, 5},
+    Range = {0, 60},
     Increment = 0.5,
     Suffix = " sec",
     CurrentValue = 1,
