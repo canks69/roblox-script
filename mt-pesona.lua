@@ -8,8 +8,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- Create Main Window (Mini Version)
 local Window = Rayfield:CreateWindow({
    Name = "Mt. Pesona",
-   LoadingTitle = "Mini",
-   LoadingSubtitle = "UI",
+   LoadingTitle = "Mt. Pesona Controller",
+   LoadingSubtitle = "By Canks",
    Theme = "Default",
 
    DisableRayfieldPrompts = false,
@@ -65,6 +65,7 @@ local currentIndex = 1
 local HumanoidRootPart
 local moveSpeed = 80 -- stud per detik
 local pausePerCheckpoint = 2 -- delay tiap checkpoint
+local teleportDelay = 1 -- delay untuk teleport (detik)
 local liftHeight = 120 -- seberapa tinggi naik ke atas sebelum teleport
 
 -- Control Variables
@@ -89,10 +90,11 @@ end
 updateHRP()
 LocalPlayer.CharacterAdded:Connect(updateHRP)
 
--- Instant teleport function
+-- Instant teleport function with delay
 local function instantTeleport(targetPos)
     if not HumanoidRootPart then return end
     
+    task.wait(teleportDelay)
     HumanoidRootPart.CFrame = CFrame.new(targetPos)
 end
 
@@ -169,8 +171,9 @@ local function respawnPlayer()
     end
 end
 
--- UI Elements (Single Tab - Mini Version)
+-- UI Elements (Mini Version with Teleport Tab)
 local Tab = Window:CreateTab("Control", "play")
+local TeleportTab = Window:CreateTab("Teleport", "map-pin")
 
 -- Status Display (Compact)
 local StatusLabel = Tab:CreateLabel("📊 Ready")
@@ -461,6 +464,19 @@ local SpeedSlider = Tab:CreateSlider({
     end,
 })
 
+-- Teleport Delay Slider
+local DelaySlider = Tab:CreateSlider({
+    Name = "TP Delay",
+    Range = {0, 5},
+    Increment = 0.5,
+    Suffix = " sec",
+    CurrentValue = 1,
+    Flag = "DelaySlider",
+    Callback = function(Value)
+        teleportDelay = Value
+    end,
+})
+
 -- Loop Count Slider (Compact)
 local LoopSlider = Tab:CreateSlider({
     Name = "Loops",
@@ -492,6 +508,219 @@ local TeleportSummitButton = Tab:CreateButton({
         if HumanoidRootPart then
             instantTeleport(coordinates.summit)
             -- print("🏔️ Teleported to Summit")
+        end
+    end,
+})
+
+-- Teleport Tab Content
+-- Base & Summit Section
+TeleportTab:CreateButton({
+    Name = "🏠 Base",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.base)
+        end
+    end,
+})
+
+-- Checkpoints 1-7
+TeleportTab:CreateButton({
+    Name = "📍 CP1",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp1)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP2", 
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp2)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP3",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp3)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP4",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp4)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP5",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp5)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP6",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp6)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP7",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp7)
+        end
+    end,
+})
+
+-- Checkpoints 8-14
+TeleportTab:CreateButton({
+    Name = "📍 CP8",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp8)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP9",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp9)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP10",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp10)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP11",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp11)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP12",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp12)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP13",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp13)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP14",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp14)
+        end
+    end,
+})
+
+-- Checkpoints 15-21
+TeleportTab:CreateButton({
+    Name = "📍 CP15",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp15)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP16",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp16)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP17",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp17)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP18",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp18)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP19",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp19)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP20",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp20)
+        end
+    end,
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 CP21",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.cp21)
+        end
+    end,
+})
+
+-- Summit
+TeleportTab:CreateButton({
+    Name = "🏔️ Summit",
+    Callback = function()
+        if HumanoidRootPart then
+            instantTeleport(coordinates.summit)
         end
     end,
 })
