@@ -7,8 +7,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- Konfigurasi Telegram Bot
-local TELEGRAM_BOT_TOKEN = "8299595872:AAHsPtqWfjsT3N2AlGy6QBxmXN3CM3PPl1Y" -- Token bot Telegram Anda
-local TELEGRAM_CHAT_ID = "6817556043" -- Ganti dengan chat ID Anda
+local TELEGRAM_BOT_TOKEN = "8299595872:AAG9ts0PzEnagQGbYPtUa2vDseqjvL5pi2w" -- Token bot Telegram Anda
+local TELEGRAM_CHAT_ID = "1222630961" -- Ganti dengan chat ID Anda
 
 -- Variabel untuk tracking posisi
 local player = Players.LocalPlayer
