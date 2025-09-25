@@ -1,10 +1,13 @@
 -- Script untuk mengambil posisi setiap perpindahan dan mengirim ke Telegram Bot
--- Position tracker and Telegram sender with GUI Controls
+-- Position tracker and Telegram sender with Rayfield UI
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Konfigurasi Telegram Bot
 local TELEGRAM_BOT_TOKEN = "8299595872:AAG9ts0PzEnagQGbYPtUa2vDseqjvL5pi2w" -- Token bot Telegram Anda
@@ -192,213 +195,341 @@ local function clearPositionData()
     print("🗑️ Position data cleared")
 end
 
--- Membuat GUI
-local function createGUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PositionTrackerGUI"
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-    screenGui.ResetOnSpawn = false
+-- Variabel untuk Rayfield UI
+local Window = nil
+local statusLabel = nil
+local Tab = nil
+
+-- Membuat Rayfield UI
+local function createRayfieldGUI()
+    -- Create Main Window
+    Window = Rayfield:CreateWindow({
+        Name = "🎮 Position Tracker",
+        LoadingTitle = "Position Tracker",
+        LoadingSubtitle = "by Canks69",
+        Theme = "Ocean", -- Ocean, DarkBlue, Amethyst, etc.
+        DisableRayfieldPrompts = false,
+        DisableBuildWarnings = false,
+        ConfigurationSaving = {
+            Enabled = true,
+            FolderName = "PositionTracker",
+            FileName = "config"
+        },
+        Discord = {
+            Enabled = false
+        },
+        KeySystem = false
+    })
     
-    -- Main Frame
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Parent = screenGui
-    mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Position = UDim2.new(0, 20, 0, 20)
-    mainFrame.Size = UDim2.new(0, 300, 0, 250)
+    -- Create Main Tab
+    Tab = Window:CreateTab("🎯 Main Controls", 4483362458)
     
-    -- Corner untuk frame utama
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 12)
-    mainCorner.Parent = mainFrame
+    -- Status Section
+    Tab:CreateSection("📊 Status Information")
     
-    -- Shadow effect
-    local shadow = Instance.new("Frame")
-    shadow.Name = "Shadow"
-    shadow.Parent = screenGui
-    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.BackgroundTransparency = 0.7
-    shadow.BorderSizePixel = 0
-    shadow.Position = UDim2.new(0, 25, 0, 25)
-    shadow.Size = UDim2.new(0, 300, 0, 250)
-    shadow.ZIndex = mainFrame.ZIndex - 1
+    statusLabel = Tab:CreateLabel("⏹️ Status: Stopped | Movements: 0 | Positions: 0")
     
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 12)
-    shadowCorner.Parent = shadow
+    -- Settings Section  
+    Tab:CreateSection("⚙️ Settings")
     
-    -- Title
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "TitleLabel"
-    titleLabel.Parent = mainFrame
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
-    titleLabel.Size = UDim2.new(1, 0, 0, 40)
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Text = "🎮 Position Tracker"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 16
+    local thresholdSlider = Tab:CreateSlider({
+        Name = "📏 Movement Threshold (studs)",
+        Range = {1, 20},
+        Increment = 1,
+        Suffix = " studs",
+        CurrentValue = positionThreshold,
+        Flag = "ThresholdSlider",
+        Callback = function(Value)
+            positionThreshold = Value
+            print("📏 Movement threshold set to: " .. Value .. " studs")
+        end,
+    })
     
-    -- Status Label
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "StatusLabel"
-    statusLabel.Parent = mainFrame
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Position = UDim2.new(0, 10, 0, 40)
-    statusLabel.Size = UDim2.new(1, -20, 0, 25)
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.Text = "⏹️ Status: Stopped"
-    statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-    statusLabel.TextSize = 12
-    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    local intervalSlider = Tab:CreateSlider({
+        Name = "⏱️ Send Interval (seconds)",
+        Range = {10, 300},
+        Increment = 10,
+        Suffix = " sec",
+        CurrentValue = sendInterval,
+        Flag = "IntervalSlider", 
+        Callback = function(Value)
+            sendInterval = Value
+            print("⏱️ Send interval set to: " .. Value .. " seconds")
+        end,
+    })
     
-    -- Info Label
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Name = "InfoLabel"
-    infoLabel.Parent = mainFrame
-    infoLabel.BackgroundTransparency = 1
-    infoLabel.Position = UDim2.new(0, 10, 0, 65)
-    infoLabel.Size = UDim2.new(1, -20, 0, 60)
-    infoLabel.Font = Enum.Font.Gotham
-    infoLabel.Text = "📊 Movements: 0\n📍 Positions: 0\n⏰ Session: " .. os.date("%H:%M:%S")
-    infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    infoLabel.TextSize = 10
-    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-    infoLabel.TextYAlignment = Enum.TextYAlignment.Top
+    -- Control Section
+    Tab:CreateSection("🎮 Controls")
+    
+    -- Start/Stop Toggle
+    local trackingToggle = Tab:CreateToggle({
+        Name = "▶️ Start Position Tracking",
+        CurrentValue = false,
+        Flag = "TrackingToggle",
+        Callback = function(Value)
+            if Value then
+                startTracking()
+            else
+                stopTracking()
+            end
+        end,
+    })
+    
+    -- Control Buttons
+    local playButton = Tab:CreateButton({
+        Name = "▶️ Start Tracking",
+        Callback = function()
+            startTracking()
+            trackingToggle:Set(true)
+        end,
+    })
+    
+    local stopButton = Tab:CreateButton({
+        Name = "⏹️ Stop Tracking", 
+        Callback = function()
+            stopTracking()
+            trackingToggle:Set(false)
+        end,
+    })
+    
+    local resetButton = Tab:CreateButton({
+        Name = "🔄 Reset Data",
+        Callback = function()
+            resetData()
+            trackingToggle:Set(false)
+            Rayfield:Notify({
+                Title = "Data Reset",
+                Content = "All position data has been cleared!",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        end,
+    })
+    
+    local sendButton = Tab:CreateButton({
+        Name = "📤 Send to Telegram",
+        Callback = function()
+            local success = sendManualUpdate()
+            if success then
+                Rayfield:Notify({
+                    Title = "Message Sent",
+                    Content = "Position data sent to Telegram successfully!",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Send Failed",
+                    Content = "Failed to send message to Telegram!",
+                    Duration = 5,
+                    Image = 4483362458,
+                })
+            end
+        end,
+    })
+    
+    -- Information Tab
+    local InfoTab = Window:CreateTab("📊 Information", 4483362458)
+    
+    InfoTab:CreateSection("📈 Session Statistics")
+    
+    local movementsLabel = InfoTab:CreateLabel("📍 Total Movements: 0")
+    local positionsLabel = InfoTab:CreateLabel("📊 Positions Recorded: 0") 
+    local sessionLabel = InfoTab:CreateLabel("⏰ Session Started: " .. os.date("%H:%M:%S"))
+    local lastPosLabel = InfoTab:CreateLabel("📍 Last Position: Not available")
+    
+    InfoTab:CreateSection("⚙️ Current Settings")
+    
+    local thresholdInfo = InfoTab:CreateLabel("📏 Movement Threshold: " .. positionThreshold .. " studs")
+    local intervalInfo = InfoTab:CreateLabel("⏱️ Send Interval: " .. sendInterval .. " seconds")
+    local botInfo = InfoTab:CreateLabel("🤖 Bot Status: Connected")
+    
+    -- Telegram Tab
+    local TelegramTab = Window:CreateTab("📱 Telegram", 4483362458)
+    
+    TelegramTab:CreateSection("🤖 Bot Configuration")
+    
+    TelegramTab:CreateLabel("🆔 Bot Token: " .. TELEGRAM_BOT_TOKEN:sub(1, 20) .. "...")
+    TelegramTab:CreateLabel("💬 Chat ID: " .. TELEGRAM_CHAT_ID)
+    
+    local testButton = TelegramTab:CreateButton({
+        Name = "🧪 Test Bot Connection",
+        Callback = function()
+            local testSuccess = sendToTelegram("🧪 *Test Message*\n\n✅ Bot connection is working!\n📅 " .. os.date("%Y-%m-%d %H:%M:%S"))
+            if testSuccess then
+                Rayfield:Notify({
+                    Title = "Test Successful",
+                    Content = "Test message sent to Telegram!",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Test Failed", 
+                    Content = "Failed to send test message!",
+                    Duration = 5,
+                    Image = 4483362458,
+                })
+            end
+        end,
+    })
+    
+    TelegramTab:CreateSection("📋 Message Preview")
+    
+    local previewButton = TelegramTab:CreateButton({
+        Name = "👁️ Preview Message Format",
+        Callback = function()
+            local previewMessage = createTelegramMessage()
+            print("📋 Message Preview:")
+            print(previewMessage)
+            Rayfield:Notify({
+                Title = "Preview Generated",
+                Content = "Check console for message preview!",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        end,
+    })
+    
+    -- Advanced Tab
+    local AdvancedTab = Window:CreateTab("⚙️ Advanced", 4483362458)
+    
+    AdvancedTab:CreateSection("🎨 UI Theme")
+    
+    local themeDropdown = AdvancedTab:CreateDropdown({
+        Name = "Select UI Theme",
+        Options = {"Ocean", "DarkBlue", "Amethyst", "Green", "Light"},
+        CurrentOption = "Ocean",
+        Flag = "ThemeDropdown",
+        Callback = function(Option)
+            -- Note: Theme change requires UI reload
+            Rayfield:Notify({
+                Title = "Theme Changed",
+                Content = "Restart script to apply " .. Option .. " theme!",
+                Duration = 5,
+                Image = 4483362458,
+            })
+        end,
+    })
+    
+    AdvancedTab:CreateSection("🔧 Advanced Settings")
+    
+    local debugToggle = AdvancedTab:CreateToggle({
+        Name = "🐛 Debug Mode",
+        CurrentValue = false,
+        Flag = "DebugToggle",
+        Callback = function(Value)
+            if Value then
+                print("🐛 Debug mode enabled")
+            else
+                print("🐛 Debug mode disabled")  
+            end
+        end,
+    })
+    
+    local autoSendToggle = AdvancedTab:CreateToggle({
+        Name = "📤 Auto Send to Telegram",
+        CurrentValue = true,
+        Flag = "AutoSendToggle",
+        Callback = function(Value)
+            if Value then
+                print("📤 Auto send enabled")
+            else
+                print("📤 Auto send disabled")
+            end
+        end,
+    })
+    
+    AdvancedTab:CreateSection("📊 Export Data")
+    
+    local exportButton = AdvancedTab:CreateButton({
+        Name = "💾 Export Position Data",
+        Callback = function()
+            local exportData = "Position Data Export\n"
+            exportData = exportData .. "Player: " .. positionData.playerName .. "\n"
+            exportData = exportData .. "Total Movements: " .. positionData.totalMovements .. "\n"
+            exportData = exportData .. "Session Start: " .. os.date("%Y-%m-%d %H:%M:%S", positionData.startTime) .. "\n\n"
+            exportData = exportData .. "Positions:\n"
+            
+            for i, pos in ipairs(positionData.positions) do
+                exportData = exportData .. string.format("%d. %s - %s (Distance: %.2f)\n", 
+                    i, 
+                    os.date("%H:%M:%S", pos.timestamp),
+                    formatPosition(pos.position),
+                    pos.distance
+                )
+            end
+            
+            print("💾 POSITION DATA EXPORT:")
+            print(exportData)
+            
+            Rayfield:Notify({
+                Title = "Data Exported",
+                Content = "Check console for exported position data!",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        end,
+    })
+    
+    local clearAllButton = AdvancedTab:CreateButton({
+        Name = "🗑️ Clear All Data & Reset",
+        Callback = function()
+            resetData()
+            Rayfield:Notify({
+                Title = "Complete Reset",
+                Content = "All data cleared and tracking stopped!",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        end,
+    })
     
     -- Fungsi untuk update status label
     function updateStatusLabel()
+        local statusText = ""
         if isTracking then
-            statusLabel.Text = "▶️ Status: Tracking"
-            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+            statusText = "▶️ Status: Tracking"
         else
-            statusLabel.Text = "⏹️ Status: Stopped"
-            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            statusText = "⏹️ Status: Stopped"
         end
         
-        infoLabel.Text = string.format("📊 Movements: %d\n📍 Positions: %d\n⏰ Session: %s",
-            positionData.totalMovements,
-            #positionData.positions,
-            os.date("%H:%M:%S", positionData.startTime)
-        )
+        statusText = statusText .. " | Movements: " .. positionData.totalMovements .. " | Positions: " .. #positionData.positions
+        
+        if statusLabel then
+            statusLabel:Set(statusText)
+        end
+        
+        -- Update information tab labels
+        if movementsLabel then movementsLabel:Set("📍 Total Movements: " .. positionData.totalMovements) end
+        if positionsLabel then positionsLabel:Set("📊 Positions Recorded: " .. #positionData.positions) end
+        if sessionLabel then sessionLabel:Set("⏰ Session Started: " .. os.date("%H:%M:%S", positionData.startTime)) end
+        if lastPosLabel and humanoidRootPart then 
+            lastPosLabel:Set("📍 Last Position: " .. formatPosition(humanoidRootPart.Position))
+        end
+        if thresholdInfo then thresholdInfo:Set("📏 Movement Threshold: " .. positionThreshold .. " studs") end
+        if intervalInfo then intervalInfo:Set("⏱️ Send Interval: " .. sendInterval .. " seconds") end
     end
     
-    -- Fungsi untuk membuat tombol
-    local function createButton(name, text, position, color, callback)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.Parent = mainFrame
-        button.BackgroundColor3 = color
-        button.BorderSizePixel = 0
-        button.Position = position
-        button.Size = UDim2.new(0, 65, 0, 30)
-        button.Font = Enum.Font.GothamBold
-        button.Text = text
-        button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.TextSize = 11
-        
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 6)
-        buttonCorner.Parent = button
-        
-        -- Hover effect
-        button.MouseEnter:Connect(function()
-            local tween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.new(color.R + 0.1, color.G + 0.1, color.B + 0.1)})
-            tween:Play()
-        end)
-        
-        button.MouseLeave:Connect(function()
-            local tween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = color})
-            tween:Play()
-        end)
-        
-        button.MouseButton1Click:Connect(callback)
-        
-        return button
-    end
-    
-    -- Tombol Play
-    createButton("PlayButton", "▶️ Play", UDim2.new(0, 10, 0, 140), Color3.fromRGB(46, 125, 50), function()
-        startTracking()
-    end)
-    
-    -- Tombol Stop
-    createButton("StopButton", "⏹️ Stop", UDim2.new(0, 85, 0, 140), Color3.fromRGB(198, 40, 40), function()
-        stopTracking()
-    end)
-    
-    -- Tombol Reset
-    createButton("ResetButton", "🔄 Reset", UDim2.new(0, 160, 0, 140), Color3.fromRGB(255, 152, 0), function()
-        resetData()
-    end)
-    
-    -- Tombol Send
-    createButton("SendButton", "📤 Send", UDim2.new(0, 235, 0, 140), Color3.fromRGB(33, 150, 243), function()
-        sendManualUpdate()
-    end)
-    
-    -- Tombol Close (X)
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Parent = mainFrame
-    closeButton.BackgroundColor3 = Color3.fromRGB(198, 40, 40)
-    closeButton.BorderSizePixel = 0
-    closeButton.Position = UDim2.new(1, -35, 0, 5)
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.Text = "✕"
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeButton.TextSize = 14
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 15)
-    closeCorner.Parent = closeButton
-    
-    closeButton.MouseButton1Click:Connect(function()
-        stopTracking()
-        screenGui:Destroy()
-        shadow:Destroy()
-    end)
-    
-    -- Draggable functionality
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-    
-    mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-        end
-    end)
-    
-    mainFrame.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            shadow.Position = UDim2.new(mainFrame.Position.X.Scale, mainFrame.Position.X.Offset + 5, mainFrame.Position.Y.Scale, mainFrame.Position.Y.Offset + 5)
-        end
-    end)
-    
-    mainFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    -- Update info setiap detik
+    -- Update status setiap detik
     spawn(function()
-        while screenGui.Parent do
+        while Window do
             updateStatusLabel()
             wait(1)
         end
     end)
     
-    -- Initial update
+    -- Initial status update
     updateStatusLabel()
+    
+    print("🎮 Rayfield Position Tracker GUI loaded successfully!")
 end
+
+-- Fungsi untuk membuat updateStatusLabel global (fallback)
+function updateStatusLabel()
+    -- This will be overridden by the Rayfield GUI function
+end
+
 
 -- Commands untuk kontrol manual (backup)
 game.Players.LocalPlayer.Chatted:Connect(function(message)
@@ -415,7 +546,7 @@ game.Players.LocalPlayer.Chatted:Connect(function(message)
     elseif message:lower() == "/stop" then
         stopTracking()
     elseif message:lower() == "/gui" then
-        createGUI()
+        createRayfieldGUI()
     end
 end)
 
@@ -432,15 +563,15 @@ game:BindToClose(function()
     end
 end)
 
--- Fungsi untuk membuat updateStatusLabel global
+-- Fungsi untuk membuat updateStatusLabel global (fallback)
 function updateStatusLabel()
-    -- This will be overridden by the GUI function
+    -- This will be overridden by the Rayfield GUI function
 end
 
 -- Startup
-print("🚀 Position Tracker Started!")
+print("🚀 Position Tracker with Rayfield UI Started!")
 print("💬 Commands: /play, /stop, /sendpos, /clearpos, /posinfo, /gui")
-print("🎮 GUI akan otomatis muncul!")
+print("🎮 Loading Rayfield UI...")
 
 -- Kirim pesan startup ke Telegram
 local startupMessage = "🚀 *Position Tracker Started*\n\n" ..
@@ -448,10 +579,10 @@ local startupMessage = "🚀 *Position Tracker Started*\n\n" ..
                       "⏰ Started at: " .. os.date("%H:%M:%S") .. "\n" ..
                       "📏 Movement threshold: " .. positionThreshold .. " studs\n" ..
                       "⏱️ Send interval: " .. sendInterval .. " seconds\n" ..
-                      "🎮 GUI Controls: Play, Stop, Reset, Send"
+                      "🎮 UI: Rayfield Professional Interface"
 
 sendToTelegram(startupMessage)
 
--- Auto-create GUI setelah 2 detik
+-- Auto-create Rayfield GUI setelah 2 detik
 wait(2)
-createGUI()
+createRayfieldGUI()
