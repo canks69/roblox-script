@@ -60,6 +60,8 @@ local moveSpeed = 80 -- stud per detik
 local walkSpeed = 50 -- walk speed for summit to finish
 local pausePerCheckpoint = 2 -- delay tiap checkpoint
 local liftHeight = 120 -- seberapa tinggi naik ke atas sebelum teleport
+local circleRadius = 20 -- radius for circular walking at checkpoints
+local circleDuration = 3 -- duration for circular walking in seconds
 
 -- Control Variables
 local isRunning = false
@@ -121,6 +123,55 @@ local function walkToPosition(targetPos, walkSpeed)
             end
         end
         task.wait(0.1)
+    end
+    
+    -- Reset walk speed to default
+    humanoid.WalkSpeed = 16
+end
+
+-- Circular walking function for checkpoints
+local function walkInCircle(centerPos, radius, duration)
+    if not HumanoidRootPart then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Set walk speed for circular movement
+    humanoid.WalkSpeed = 50
+    
+    -- Calculate circular movement
+    local startTime = tick()
+    local angleStep = 0
+    
+    while (tick() - startTime) < duration and isRunning do
+        if isPaused then
+            humanoid:MoveTo(HumanoidRootPart.Position) -- Stop moving when paused
+            while isPaused and isRunning do
+                task.wait(0.1)
+            end
+            if not isRunning then break end
+        end
+        
+        -- Calculate position on circle
+        local angle = angleStep * math.rad(36) -- 36 degrees per step (10 points on circle)
+        local x = centerPos.X + radius * math.cos(angle)
+        local z = centerPos.Z + radius * math.sin(angle)
+        local circlePos = Vector3.new(x, centerPos.Y, z)
+        
+        -- Move to circle position
+        humanoid:MoveTo(circlePos)
+        
+        -- Wait a bit before next position
+        task.wait(0.3)
+        angleStep = angleStep + 1
+        
+        -- Complete circle after 10 steps
+        if angleStep >= 10 then
+            break
+        end
     end
     
     -- Reset walk speed to default
@@ -193,7 +244,6 @@ local function respawnPlayer()
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             humanoid.Health = 0
-            print("💀 Respawning player...")
             task.wait(5) -- Wait for respawn
             updateHRP() -- Update HRP after respawn
         end
@@ -261,11 +311,9 @@ local function startMainLoop()
         while isRunning do
             -- Check if we should continue looping
             if not infiniteLoop and currentLoop > loopCount then
-                print("🎉 All loops completed!")
                 break
             end
             
-            print("🔄 Starting loop " .. currentLoop .. (infiniteLoop and " (∞)" or "/" .. loopCount))
             updateStatus()
             
             -- Wait if paused
@@ -279,35 +327,28 @@ local function startMainLoop()
             if HumanoidRootPart then
                 if skipCheckpoints then
                     -- Skip directly to summit then to finish
-                    print("⚡ Skipping checkpoints - direct to summit!")
                     local summitPos = coordinates.summit
                     local finishPos = coordinates.finish
                     if summitPos and finishPos then
                         updateStatus()
-                        print("▶️ Instant teleport ke SUMMIT")
                         instantTeleport(summitPos)
-                        print("✅ Sampai di SUMMIT")
                         
-                        if not safeWait(pausePerCheckpoint) then break end
+                        -- Do circular walking at summit
+                        walkInCircle(summitPos, circleRadius, circleDuration)
                         
-                        -- Lari ke finish tanpa delay
-                        print("🏃‍♂️ Berlari ke finish area")
+                        -- Direct walk to finish without delay
                         walkToPosition(finishPos, walkSpeed) -- Walk/run with configured speed
-                        print("✅ Sampai di finish area")
                         
                         if not safeWait(pausePerCheckpoint) then break end
                         
                         -- Handle auto respawn or return to base
                         if autoRespawn then
-                            print("💀 Auto respawning...")
                             respawnPlayer()
                             if not safeWait(3) then break end -- Wait after respawn
                         else
-                            print("⚡ Instant teleport kembali ke base")
                             if HumanoidRootPart then
                                 instantTeleport(coordinates.base)
                             end
-                            print("✅ Kembali di base")
                         end
                         
                         -- Move to next loop
@@ -315,7 +356,6 @@ local function startMainLoop()
                         updateStatus()
                         if not safeWait(5) then break end -- Extra delay between loops
                     else
-                        print("❌ Summit or finish coordinates not found!")
                         break
                     end
                 else
@@ -338,36 +378,32 @@ local function startMainLoop()
                             
                             -- Check if this is summit
                             if cp == "summit" then
-                                print("▶️ " .. (useInstantTeleport and "Instant teleport" or "Teleport via udara") .. " ke " .. string.upper(cp))
                                 if useInstantTeleport then
                                     instantTeleport(target)
                                 else
                                     teleportViaAir(target)
                                 end
-                                print("✅ Sampai di " .. string.upper(cp))
                                 
-                                if not safeWait(pausePerCheckpoint) then break end
+                                -- Do circular walking at summit
+                                walkInCircle(target, circleRadius, circleDuration)
                                 
+                                -- No delay, immediately proceed to finish
                                 currentIndex += 1
                             -- Check if this is finish
                             elseif cp == "finish" and currentIndex == #checkpointOrder then
-                                print("🏃‍♂️ Berlari ke finish area (tanpa delay)")
+                                -- Direct walk to finish without delay
                                 walkToPosition(target, walkSpeed) -- Walk/run with configured speed
-                                print("✅ Sampai di finish area")
                                 
                                 if not safeWait(pausePerCheckpoint) then break end
                                 
                                 -- Handle auto respawn or return to base
                                 if autoRespawn then
-                                    print("💀 Auto respawning...")
                                     respawnPlayer()
                                     if not safeWait(3) then break end -- Wait after respawn
                                 else
-                                    print("⚡ Instant teleport kembali ke base")
                                     if HumanoidRootPart then
                                         instantTeleport(coordinates.base)
                                     end
-                                    print("✅ Kembali di base")
                                 end
                                 
                                 -- Move to next loop
@@ -377,13 +413,17 @@ local function startMainLoop()
                                 if not safeWait(5) then break end -- Extra delay between loops
                                 break -- Break inner loop to start next cycle
                             else
-                                print("▶️ " .. (useInstantTeleport and "Instant teleport" or "Teleport via udara") .. " ke " .. string.upper(cp))
+                                -- Regular checkpoint (base, cp1-cp10)
                                 if useInstantTeleport then
                                     instantTeleport(target)
                                 else
                                     teleportViaAir(target)
                                 end
-                                print("✅ Sampai di " .. string.upper(cp))
+                                
+                                -- Do circular walking at each checkpoint
+                                if cp ~= "base" then -- Don't do circular walking at base
+                                    walkInCircle(target, circleRadius, circleDuration)
+                                end
 
                                 if not safeWait(pausePerCheckpoint) then break end
 
@@ -392,13 +432,11 @@ local function startMainLoop()
                             
                             updateStatus()
                         else
-                            print("❌ Invalid checkpoint: " .. tostring(cp))
                             break
                         end
                     end
                 end
             else
-                print("❌ HumanoidRootPart not found!")
                 break
             end
             
@@ -412,7 +450,6 @@ local function startMainLoop()
             _G.PlayPauseToggleSeravine:Set(false)
         end
         updateStatus()
-        print("⏹️ Main loop ended")
     end)
 end
 
@@ -443,10 +480,7 @@ local StartPositionDropdown = MainTab:CreateDropdown({
         
         if not isRunning then
             currentIndex = positionMap[Option[1]] or 1
-            print("🚀 Start position set to: " .. (checkpointOrder[currentIndex] or "unknown"))
             updateStatus()
-        else
-            print("⚠️ Cannot change start position while running!")
         end
     end,
 })
@@ -463,18 +497,15 @@ local PlayPauseToggle = MainTab:CreateToggle({
                 isRunning = true
                 isPaused = false
                 currentLoop = 1
-                print("▶️ Starting Mt. Seravine auto climb from " .. string.upper(checkpointOrder[currentIndex] or "unknown"))
                 startMainLoop()
             else
                 -- Resume from pause
                 isPaused = false
-                print("▶️ Resuming auto climb")
             end
         else
             if isRunning then
                 -- Pause
                 isPaused = true
-                print("⏸️ Auto climb paused")
             end
         end
         updateStatus()
@@ -492,7 +523,6 @@ local StopButton = MainTab:CreateButton({
         if _G.PlayPauseToggleSeravine and _G.PlayPauseToggleSeravine.Set then
             _G.PlayPauseToggleSeravine:Set(false)
         end
-        print("⏹️ Auto climb stopped")
     end,
 })
 
@@ -500,13 +530,19 @@ local StopButton = MainTab:CreateButton({
 local ResetButton = MainTab:CreateButton({
     Name = "🔄 Reset to Base",
     Callback = function()
-        currentIndex = 1
-        currentLoop = 1
         if not isRunning then
+            -- Reset all variables
+            currentIndex = 1
+            currentLoop = 1
+            
+            -- Teleport player to base
+            if HumanoidRootPart and coordinates.base then
+                instantTeleport(coordinates.base)
+            end
+            
+            -- Update status display
             updateStatus()
-            print("🔄 Position reset to Base")
-        else
-            print("⚠️ Cannot reset while running! Stop first.")
+        end
         end
     end,
 })
@@ -524,7 +560,6 @@ local SpeedSlider = SettingsTab:CreateSlider({
     Flag = "SpeedSlider",
     Callback = function(Value)
         moveSpeed = Value
-        print("🏃‍♂️ Move speed set to " .. Value .. " studs/sec")
     end,
 })
 
@@ -538,7 +573,32 @@ local WalkSpeedSlider = SettingsTab:CreateSlider({
     Flag = "WalkSpeedSlider",
     Callback = function(Value)
         walkSpeed = Value
-        print("🚶‍♂️ Walk speed set to " .. Value .. " walkspeed")
+    end,
+})
+
+-- Circle Radius Slider
+local CircleRadiusSlider = SettingsTab:CreateSlider({
+    Name = "🔄 Circle Radius",
+    Range = {10, 50},
+    Increment = 5,
+    Suffix = " studs",
+    CurrentValue = 20,
+    Flag = "CircleRadiusSlider",
+    Callback = function(Value)
+        circleRadius = Value
+    end,
+})
+
+-- Circle Duration Slider
+local CircleDurationSlider = SettingsTab:CreateSlider({
+    Name = "⏱️ Circle Duration",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = " seconds",
+    CurrentValue = 3,
+    Flag = "CircleDurationSlider",
+    Callback = function(Value)
+        circleDuration = Value
     end,
 })
 
@@ -552,7 +612,6 @@ local PauseSlider = SettingsTab:CreateSlider({
     Flag = "PauseSlider",
     Callback = function(Value)
         pausePerCheckpoint = Value
-        print("⏱️ Pause time set to " .. Value .. " seconds")
     end,
 })
 
@@ -566,7 +625,6 @@ local LiftSlider = SettingsTab:CreateSlider({
     Flag = "LiftSlider",
     Callback = function(Value)
         liftHeight = Value
-        print("✈️ Lift height set to " .. Value .. " studs")
     end,
 })
 
@@ -580,11 +638,6 @@ local SkipToggle = SettingsTab:CreateToggle({
     Flag = "SkipCheckpointsToggle",
     Callback = function(Value)
         skipCheckpoints = Value
-        if skipCheckpoints then
-            print("⚡ Skip mode enabled - will teleport directly to summit then finish!")
-        else
-            print("📍 Normal mode - will visit all checkpoints")
-        end
         updateStatus()
     end,
 })
@@ -599,11 +652,6 @@ local InstantTeleportToggle = SettingsTab:CreateToggle({
     Flag = "InstantTeleportToggle",
     Callback = function(Value)
         useInstantTeleport = Value
-        if useInstantTeleport then
-            print("⚡ Instant teleport enabled - immediate teleportation!")
-        else
-            print("🎬 Smooth teleport enabled - animated movement")
-        end
     end,
 })
 
@@ -617,11 +665,6 @@ local RespawnToggle = SettingsTab:CreateToggle({
     Flag = "AutoRespawnToggle",
     Callback = function(Value)
         autoRespawn = Value
-        if autoRespawn then
-            print("💀 Auto respawn enabled - will respawn after reaching finish")
-        else
-            print("🏠 Normal mode - will return to base after finish")
-        end
     end,
 })
 
@@ -635,11 +678,6 @@ local InfiniteToggle = SettingsTab:CreateToggle({
     Flag = "InfiniteLoopToggle",
     Callback = function(Value)
         infiniteLoop = Value
-        if infiniteLoop then
-            print("♾️ Infinite loop enabled - will run forever!")
-        else
-            print("🔢 Finite loop - will use specified count")
-        end
         updateStatus()
     end,
 })
@@ -654,9 +692,6 @@ local LoopSlider = SettingsTab:CreateSlider({
     Flag = "LoopCountSlider",
     Callback = function(Value)
         loopCount = Value
-        if not infiniteLoop then
-            print("🔢 Loop count set to " .. Value .. " loops")
-        end
         updateStatus()
     end,
 })
@@ -670,7 +705,6 @@ local TeleportBaseButton = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.base)
-            print("🏠 Instantly teleported to Base")
         end
     end,
 })
@@ -680,7 +714,6 @@ local TeleportSummitButton = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.summit)
-            print("🏔️ Instantly teleported to Summit")
         end
     end,
 })
@@ -690,7 +723,6 @@ local TeleportFinishButton = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.finish)
-            print("🏁 Instantly teleported to Finish")
         end
     end,
 })
@@ -703,7 +735,6 @@ local TeleportCP1Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp1)
-            print("📍 Instantly teleported to CP1")
         end
     end,
 })
@@ -713,7 +744,6 @@ local TeleportCP2Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp2)
-            print("📍 Instantly teleported to CP2")
         end
     end,
 })
@@ -723,7 +753,6 @@ local TeleportCP3Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp3)
-            print("📍 Instantly teleported to CP3")
         end
     end,
 })
@@ -733,7 +762,6 @@ local TeleportCP4Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp4)
-            print("📍 Instantly teleported to CP4")
         end
     end,
 })
@@ -743,7 +771,6 @@ local TeleportCP5Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp5)
-            print("📍 Instantly teleported to CP5")
         end
     end,
 })
@@ -756,7 +783,6 @@ local TeleportCP6Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp6)
-            print("📍 Instantly teleported to CP6")
         end
     end,
 })
@@ -766,7 +792,6 @@ local TeleportCP7Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp7)
-            print("📍 Instantly teleported to CP7")
         end
     end,
 })
@@ -776,7 +801,6 @@ local TeleportCP8Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp8)
-            print("📍 Instantly teleported to CP8")
         end
     end,
 })
@@ -786,7 +810,6 @@ local TeleportCP9Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp9)
-            print("📍 Instantly teleported to CP9")
         end
     end,
 })
@@ -796,7 +819,6 @@ local TeleportCP10Button = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             instantTeleport(coordinates.cp10)
-            print("📍 Instantly teleported to CP10")
         end
     end,
 })
@@ -818,7 +840,6 @@ local SequentialTeleportButton = TeleportTab:CreateButton({
             if nextPos then
                 instantTeleport(nextPos)
                 currentIndex = nextIndex
-                print("🔄 Teleported to next checkpoint: " .. string.upper(nextCP))
                 updateStatus()
             end
         end
@@ -839,7 +860,6 @@ local PreviousTeleportButton = TeleportTab:CreateButton({
             if prevPos then
                 instantTeleport(prevPos)
                 currentIndex = prevIndex
-                print("⏮️ Teleported to previous checkpoint: " .. string.upper(prevCP))
                 updateStatus()
             end
         end
@@ -856,7 +876,6 @@ local RandomTeleportButton = TeleportTab:CreateButton({
             local randomPos = coordinates[randomCP]
             if randomPos then
                 instantTeleport(randomPos)
-                print("🎲 Randomly teleported to: " .. string.upper(randomCP))
             end
         end
     end,
@@ -868,11 +887,9 @@ local CurrentPositionButton = TeleportTab:CreateButton({
     Callback = function()
         if HumanoidRootPart then
             local pos = HumanoidRootPart.Position
-            print("📌 Current Position: X=" .. math.floor(pos.X) .. ", Y=" .. math.floor(pos.Y) .. ", Z=" .. math.floor(pos.Z))
             -- Copy to clipboard if possible
             if setclipboard then
                 setclipboard("Vector3.new(" .. math.floor(pos.X) .. ", " .. math.floor(pos.Y) .. ", " .. math.floor(pos.Z) .. ")")
-                print("📋 Position copied to clipboard!")
             end
         end
     end,
@@ -889,17 +906,17 @@ InfoTab:CreateParagraph({
 
 InfoTab:CreateParagraph({
     Title = "✨ Special Features",
-    Content = "• Skip Checkpoints: Direct teleport to summit then finish\n• Auto Respawn: Respawn after reaching finish area\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs\n• Instant Teleport: Immediate teleportation (default)\n• Smooth Teleport: Animated movement (optional)"
+    Content = "• Skip Checkpoints: Direct teleport to summit then finish\n• Circular Walking: Walk in circles at each checkpoint\n• Auto Respawn: Respawn after reaching finish area\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs\n• Instant Teleport: Immediate teleportation (default)\n• Smooth Teleport: Animated movement (optional)"
 })
 
 InfoTab:CreateParagraph({
     Title = "⚙️ Settings Guide",
-    Content = "• Move Speed: Teleportation speed\n• Walk Speed: Walking speed from Summit to Finish\n• Pause Time: Delay between checkpoints\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
+    Content = "• Move Speed: Teleportation speed\n• Walk Speed: Walking speed from Summit to Finish\n• Circle Radius: Radius for circular walking at checkpoints\n• Circle Duration: Time spent walking in circles\n• Pause Time: Delay between checkpoints\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
 })
 
 InfoTab:CreateParagraph({
     Title = "📊 Mt. Seravine Route",
-    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: WALKS/RUNS from Summit to Finish (no teleport)"
+    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: Circular walking at each checkpoint\nSummit→Finish: Direct walk without delay"
 })
 
 -- Initialize
@@ -914,9 +931,3 @@ end)
 
 -- Load Configuration
 Rayfield:LoadConfiguration()
-
-print("🏔️ Mt. Seravine Auto Climb loaded successfully!")
-print("✨ Features: Skip Checkpoints, Auto Respawn, Infinite Loop, Sprint to Finish")
-print("📍 13 checkpoints available (Base + CP1-10 + Summit + Finish)")
-print("🏃‍♂️ Special: No delay sprint from Summit to Finish area!")
-print("🎮 Use the GUI to control your climb!")
