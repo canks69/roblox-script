@@ -57,6 +57,7 @@ local checkpointOrder = {
 local currentIndex = 1
 local HumanoidRootPart
 local moveSpeed = 80 -- stud per detik
+local walkSpeed = 50 -- walk speed for summit to finish
 local pausePerCheckpoint = 2 -- delay tiap checkpoint
 local liftHeight = 120 -- seberapa tinggi naik ke atas sebelum teleport
 
@@ -87,6 +88,43 @@ local function instantTeleport(targetPos)
     if not HumanoidRootPart then return end
     
     HumanoidRootPart.CFrame = CFrame.new(targetPos)
+end
+
+-- Walking/Running function (for summit to finish)
+local function walkToPosition(targetPos, walkSpeed)
+    if not HumanoidRootPart then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Set walk speed
+    humanoid.WalkSpeed = walkSpeed or 16
+    
+    -- Use Humanoid:MoveTo for natural walking
+    humanoid:MoveTo(targetPos)
+    
+    -- Wait until character reaches destination or gets close enough
+    local startTime = tick()
+    local timeout = 30 -- 30 seconds timeout
+    
+    while (HumanoidRootPart.Position - targetPos).Magnitude > 5 and (tick() - startTime) < timeout and isRunning do
+        if isPaused then
+            humanoid:MoveTo(HumanoidRootPart.Position) -- Stop moving when paused
+            while isPaused and isRunning do
+                task.wait(0.1)
+            end
+            if isRunning then
+                humanoid:MoveTo(targetPos) -- Resume moving
+            end
+        end
+        task.wait(0.1)
+    end
+    
+    -- Reset walk speed to default
+    humanoid.WalkSpeed = 16
 end
 
 -- Smooth teleport (kept for optional use)
@@ -254,7 +292,7 @@ local function startMainLoop()
                         
                         -- Lari ke finish tanpa delay
                         print("🏃‍♂️ Berlari ke finish area")
-                        instantTeleport(finishPos)
+                        walkToPosition(finishPos, walkSpeed) -- Walk/run with configured speed
                         print("✅ Sampai di finish area")
                         
                         if not safeWait(pausePerCheckpoint) then break end
@@ -314,7 +352,7 @@ local function startMainLoop()
                             -- Check if this is finish
                             elseif cp == "finish" and currentIndex == #checkpointOrder then
                                 print("🏃‍♂️ Berlari ke finish area (tanpa delay)")
-                                instantTeleport(target)
+                                walkToPosition(target, walkSpeed) -- Walk/run with configured speed
                                 print("✅ Sampai di finish area")
                                 
                                 if not safeWait(pausePerCheckpoint) then break end
@@ -490,10 +528,24 @@ local SpeedSlider = SettingsTab:CreateSlider({
     end,
 })
 
+-- Walk Speed Slider for Summit to Finish
+local WalkSpeedSlider = SettingsTab:CreateSlider({
+    Name = "🚶‍♂️ Walk Speed (Summit→Finish)",
+    Range = {16, 100},
+    Increment = 2,
+    Suffix = " walkspeed",
+    CurrentValue = 50,
+    Flag = "WalkSpeedSlider",
+    Callback = function(Value)
+        walkSpeed = Value
+        print("🚶‍♂️ Walk speed set to " .. Value .. " walkspeed")
+    end,
+})
+
 -- Pause Time Slider
 local PauseSlider = SettingsTab:CreateSlider({
     Name = "⏱️ Pause Between Checkpoints",
-    Range = {0.5, 10},
+    Range = {5, 60},
     Increment = 0.5,
     Suffix = " seconds",
     CurrentValue = 2,
@@ -842,12 +894,12 @@ InfoTab:CreateParagraph({
 
 InfoTab:CreateParagraph({
     Title = "⚙️ Settings Guide",
-    Content = "• Move Speed: Teleportation speed\n• Pause Time: Delay between checkpoints\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
+    Content = "• Move Speed: Teleportation speed\n• Walk Speed: Walking speed from Summit to Finish\n• Pause Time: Delay between checkpoints\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
 })
 
 InfoTab:CreateParagraph({
     Title = "📊 Mt. Seravine Route",
-    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: No delay between Summit → Finish"
+    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: WALKS/RUNS from Summit to Finish (no teleport)"
 })
 
 -- Initialize
