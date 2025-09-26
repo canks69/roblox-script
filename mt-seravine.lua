@@ -1,5 +1,5 @@
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer =local circleRadius = 20 -- radius for circular walking at checkpointslayers.LocalPlayer
 local RunService = game:GetService("RunService")
 
 -- Load Rayfield UI Library
@@ -60,13 +60,15 @@ local moveSpeed = 80 -- stud per detik
 local walkSpeed = 50 -- walk speed for summit to finish
 local pausePerCheckpoint = 2 -- delay tiap checkpoint
 local liftHeight = 120 -- seberapa tinggi naik ke atas sebelum teleport
-local circleRadius = 20 -- radius for circular walking at checkpoints
+local circleRadius = 15 -- radius for circular walking at checkpoints
 local circleDuration = 3 -- duration for circular walking in seconds
 
 -- Control Variables
 local isRunning = false
 local isPaused = false
 local mainLoop = nil
+local circleLoop = nil
+local shouldStopCircle = false
 
 -- Feature Variables
 local skipCheckpoints = false -- Skip to summit directly
@@ -129,53 +131,83 @@ local function walkToPosition(targetPos, walkSpeed)
     humanoid.WalkSpeed = 16
 end
 
--- Circular walking function for checkpoints
-local function walkInCircle(centerPos, radius, duration)
-    if not HumanoidRootPart then return end
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    
-    -- Set walk speed for circular movement
-    humanoid.WalkSpeed = 50
-    
-    -- Calculate circular movement
-    local startTime = tick()
-    local angleStep = 0
-    
-    while (tick() - startTime) < duration and isRunning do
-        if isPaused then
-            humanoid:MoveTo(HumanoidRootPart.Position) -- Stop moving when paused
-            while isPaused and isRunning do
-                task.wait(0.1)
-            end
-            if not isRunning then break end
-        end
-        
-        -- Calculate position on circle
-        local angle = angleStep * math.rad(36) -- 36 degrees per step (10 points on circle)
-        local x = centerPos.X + radius * math.cos(angle)
-        local z = centerPos.Z + radius * math.sin(angle)
-        local circlePos = Vector3.new(x, centerPos.Y, z)
-        
-        -- Move to circle position
-        humanoid:MoveTo(circlePos)
-        
-        -- Wait a bit before next position
-        task.wait(0.3)
-        angleStep = angleStep + 1
-        
-        -- Complete circle after 10 steps
-        if angleStep >= 10 then
-            break
-        end
+-- Start circular walking function (runs in background)
+local function startCircularWalking(centerPos, radius)
+    if circleLoop then
+        task.cancel(circleLoop)
     end
     
-    -- Reset walk speed to default
-    humanoid.WalkSpeed = 16
+    shouldStopCircle = false
+    
+    circleLoop = task.spawn(function()
+        if not HumanoidRootPart then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        
+        -- Set walk speed for circular movement
+        humanoid.WalkSpeed = 50
+        
+        -- Calculate circular movement (infinite loop)
+        local angleStep = 0
+        
+        while isRunning and not shouldStopCircle do
+            if isPaused then
+                humanoid:MoveTo(HumanoidRootPart.Position) -- Stop moving when paused
+                while isPaused and isRunning and not shouldStopCircle do
+                    task.wait(0.1)
+                end
+                if not isRunning or shouldStopCircle then break end
+            end
+            
+            -- Calculate position on circle
+            local angle = angleStep * math.rad(36) -- 36 degrees per step (10 points on circle)
+            local x = centerPos.X + radius * math.cos(angle)
+            local z = centerPos.Z + radius * math.sin(angle)
+            local circlePos = Vector3.new(x, centerPos.Y, z)
+            
+            -- Move to circle position
+            humanoid:MoveTo(circlePos)
+            
+            -- Wait a bit before next position
+            task.wait(0.3)
+            angleStep = angleStep + 1
+            
+            -- Reset angle after full circle (10 steps)
+            if angleStep >= 10 then
+                angleStep = 0
+            end
+        end
+        
+        -- Reset walk speed to default
+        if humanoid then
+            humanoid.WalkSpeed = 16
+        end
+    end)
+end
+
+-- Stop circular walking function
+local function stopCircularWalking()
+    shouldStopCircle = true
+    if circleLoop then
+        task.cancel(circleLoop)
+        circleLoop = nil
+    end
+    
+    -- Reset walk speed
+    if HumanoidRootPart then
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+                humanoid:MoveTo(HumanoidRootPart.Position) -- Stop current movement
+            end
+        end
+    end
 end
 
 -- Smooth teleport (kept for optional use)
@@ -292,6 +324,10 @@ end
 local function stopMainLoop()
     isRunning = false
     isPaused = false
+    
+    -- Stop circular walking
+    stopCircularWalking()
+    
     if mainLoop then
         task.cancel(mainLoop)
         mainLoop = nil
@@ -333,8 +369,14 @@ local function startMainLoop()
                         updateStatus()
                         instantTeleport(summitPos)
                         
-                        -- Do circular walking at summit
-                        walkInCircle(summitPos, circleRadius, circleDuration)
+                        -- Start circular walking at summit
+                        startCircularWalking(summitPos, circleRadius)
+                        
+                        -- Wait for pause duration while circling
+                        if not safeWait(pausePerCheckpoint) then break end
+                        
+                        -- Stop circular walking before proceeding to finish
+                        stopCircularWalking()
                         
                         -- Direct walk to finish without delay
                         walkToPosition(finishPos, walkSpeed) -- Walk/run with configured speed
@@ -384,8 +426,14 @@ local function startMainLoop()
                                     teleportViaAir(target)
                                 end
                                 
-                                -- Do circular walking at summit
-                                walkInCircle(target, circleRadius, circleDuration)
+                                -- Start circular walking at summit
+                                startCircularWalking(target, circleRadius)
+                                
+                                -- Wait for pause duration while circling
+                                if not safeWait(pausePerCheckpoint) then break end
+                                
+                                -- Stop circular walking before proceeding to finish
+                                stopCircularWalking()
                                 
                                 -- No delay, immediately proceed to finish
                                 currentIndex += 1
@@ -420,12 +468,18 @@ local function startMainLoop()
                                     teleportViaAir(target)
                                 end
                                 
-                                -- Do circular walking at each checkpoint
+                                -- Start circular walking at each checkpoint (except base)
                                 if cp ~= "base" then -- Don't do circular walking at base
-                                    walkInCircle(target, circleRadius, circleDuration)
+                                    startCircularWalking(target, circleRadius)
                                 end
 
+                                -- Wait for pause duration (while circling)
                                 if not safeWait(pausePerCheckpoint) then break end
+                                
+                                -- Stop circular walking before teleporting to next checkpoint
+                                if cp ~= "base" then
+                                    stopCircularWalking()
+                                end
 
                                 currentIndex += 1
                             end
@@ -588,18 +642,7 @@ local CircleRadiusSlider = SettingsTab:CreateSlider({
     end,
 })
 
--- Circle Duration Slider
-local CircleDurationSlider = SettingsTab:CreateSlider({
-    Name = "⏱️ Circle Duration",
-    Range = {1, 10},
-    Increment = 0.5,
-    Suffix = " seconds",
-    CurrentValue = 3,
-    Flag = "CircleDurationSlider",
-    Callback = function(Value)
-        circleDuration = Value
-    end,
-})
+
 
 -- Pause Time Slider
 local PauseSlider = SettingsTab:CreateSlider({
@@ -905,17 +948,17 @@ InfoTab:CreateParagraph({
 
 InfoTab:CreateParagraph({
     Title = "✨ Special Features",
-    Content = "• Skip Checkpoints: Direct teleport to summit then finish\n• Circular Walking: Walk in circles at each checkpoint\n• Auto Respawn: Respawn after reaching finish area\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs\n• Instant Teleport: Immediate teleportation (default)\n• Smooth Teleport: Animated movement (optional)"
+    Content = "• Skip Checkpoints: Direct teleport to summit then finish\n• Infinite Circular Walking: Walk continuously in circles at each checkpoint\n• Auto Respawn: Respawn after reaching finish area\n• Infinite Loop: Run forever until stopped\n• Finite Loop: Set specific number of runs\n• Instant Teleport: Immediate teleportation (default)\n• Smooth Teleport: Animated movement (optional)"
 })
 
 InfoTab:CreateParagraph({
     Title = "⚙️ Settings Guide",
-    Content = "• Move Speed: Teleportation speed\n• Walk Speed: Walking speed from Summit to Finish\n• Circle Radius: Radius for circular walking at checkpoints\n• Circle Duration: Time spent walking in circles\n• Pause Time: Delay between checkpoints\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
+    Content = "• Move Speed: Teleportation speed\n• Walk Speed: Walking speed from Summit to Finish\n• Circle Radius: Radius for circular walking at checkpoints\n• Pause Time: Duration of circular walking at each checkpoint\n• Lift Height: Flying height for teleports\n• Loop Count: Number of complete runs"
 })
 
 InfoTab:CreateParagraph({
     Title = "📊 Mt. Seravine Route",
-    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: Circular walking at each checkpoint\nSummit→Finish: Direct walk without delay"
+    Content = "Base → CP1-10 → Summit → Finish\nTotal: 13 checkpoints\nSkip mode: Base → Summit → Finish (3 points only)\nSpecial: Continuous circular walking at each checkpoint until teleport\nSummit→Finish: Direct walk without delay"
 })
 
 -- Initialize
