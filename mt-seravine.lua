@@ -543,7 +543,6 @@ local ResetButton = MainTab:CreateButton({
             -- Update status display
             updateStatus()
         end
-        end
     end,
 })
 
