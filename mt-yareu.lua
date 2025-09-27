@@ -24,13 +24,21 @@ local MOVEMENT_CONFIG = {
     walkSpeed = 16,
     runSpeed = 25,
     autoRespawn = true,  -- Respawn otomatis setelah mencapai base
-    respawnDelay = 5     -- Delay sebelum respawn (detik)
+    respawnDelay = 5,    -- Delay sebelum respawn (detik)
+    showCountdown = true, -- Show/hide countdown popup
+    countdownPosition = "TopCenter" -- Position of countdown popup
 }
 
 -- ====== VARIABLES ======
 local character, humanoid, rootPart
 local teleportConnection
 local startTime = tick()
+
+-- ====== COUNTDOWN POPUP VARIABLES ======
+local countdownGui = nil
+local countdownFrame = nil
+local countdownLabel = nil
+local countdownConnection = nil
 
 -- ====== UTILITY FUNCTIONS ======
 function InitializeCharacter()
@@ -322,6 +330,256 @@ function SetStartPosition(x, y, z)
     print("📍 Start position updated to: " .. tostring(MOVEMENT_CONFIG.startPosition))
 end
 
+-- ====== COUNTDOWN POPUP FUNCTIONS ======
+function CreateCountdownGUI()
+    -- Remove existing GUI if it exists
+    if countdownGui then
+        countdownGui:Destroy()
+    end
+    
+    -- Create ScreenGui
+    countdownGui = Instance.new("ScreenGui")
+    countdownGui.Name = "CountdownGUI"
+    countdownGui.ResetOnSpawn = false
+    countdownGui.Parent = player:WaitForChild("PlayerGui")
+    
+    -- Create main frame
+    countdownFrame = Instance.new("Frame")
+    countdownFrame.Name = "CountdownFrame"
+    countdownFrame.Size = UDim2.new(0, 200, 0, 80)
+    countdownFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    countdownFrame.BackgroundTransparency = 0.1
+    countdownFrame.BorderSizePixel = 0
+    countdownFrame.Parent = countdownGui
+    
+    -- Position based on config
+    if MOVEMENT_CONFIG.countdownPosition == "TopCenter" then
+        countdownFrame.Position = UDim2.new(0.5, -100, 0, 10)
+    elseif MOVEMENT_CONFIG.countdownPosition == "TopLeft" then
+        countdownFrame.Position = UDim2.new(0, 10, 0, 10)
+    elseif MOVEMENT_CONFIG.countdownPosition == "TopRight" then
+        countdownFrame.Position = UDim2.new(1, -210, 0, 10)
+    elseif MOVEMENT_CONFIG.countdownPosition == "Center" then
+        countdownFrame.Position = UDim2.new(0.5, -100, 0.5, -40)
+    else
+        countdownFrame.Position = UDim2.new(0.5, -100, 0, 10)
+    end
+    
+    -- Add corner radius
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = countdownFrame
+    
+    -- Add stroke/border
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 162, 255)
+    stroke.Thickness = 2
+    stroke.Parent = countdownFrame
+    
+    -- Title label
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, -25, 0, 20)
+    titleLabel.Position = UDim2.new(0, 5, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "🚀 Auto Movement"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextScaled = true
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Parent = countdownFrame
+    
+    -- Countdown label (main display)
+    countdownLabel = Instance.new("TextLabel")
+    countdownLabel.Name = "CountdownLabel"
+    countdownLabel.Size = UDim2.new(1, -10, 0, 30)
+    countdownLabel.Position = UDim2.new(0, 5, 0, 20)
+    countdownLabel.BackgroundTransparency = 1
+    countdownLabel.Text = "Next: 00:00"
+    countdownLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+    countdownLabel.TextScaled = true
+    countdownLabel.Font = Enum.Font.GothamBold
+    countdownLabel.Parent = countdownFrame
+    
+    -- Progress bar background
+    local progressBg = Instance.new("Frame")
+    progressBg.Name = "ProgressBackground"
+    progressBg.Size = UDim2.new(1, -20, 0, 3)
+    progressBg.Position = UDim2.new(0, 10, 0, 55)
+    progressBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = countdownFrame
+    
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(0, 2)
+    progressCorner.Parent = progressBg
+    
+    -- Progress bar fill
+    local progressFill = Instance.new("Frame")
+    progressFill.Name = "ProgressFill"
+    progressFill.Size = UDim2.new(0, 0, 1, 0)
+    progressFill.Position = UDim2.new(0, 0, 0, 0)
+    progressFill.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    progressFill.BorderSizePixel = 0
+    progressFill.Parent = progressBg
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 2)
+    fillCorner.Parent = progressFill
+    
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 15, 0, 15)
+    closeButton.Position = UDim2.new(1, -18, 0, 3)
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextScaled = true
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = countdownFrame
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 4)
+    closeCorner.Parent = closeButton
+    
+    -- Close button functionality
+    closeButton.MouseButton1Click:Connect(function()
+        HideCountdownPopup()
+    end)
+    
+    -- Make frame draggable
+    local dragToggle = nil
+    local dragSpeed = 0.25
+    local dragStart = nil
+    local startPos = nil
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        game:GetService('TweenService'):Create(countdownFrame, TweenInfo.new(dragSpeed), {Position = position}):Play()
+    end
+    
+    countdownFrame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = countdownFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+    
+    countdownFrame.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            if dragToggle then
+                updateInput(input)
+            end
+        end
+    end)
+    
+    return statusLabel, progressFill
+end
+
+function UpdateCountdownDisplay()
+    if not countdownGui or not countdownLabel or not MOVEMENT_CONFIG.showCountdown then
+        return
+    end
+    
+    local progressFill = countdownGui.CountdownFrame.ProgressBackground:FindFirstChild("ProgressFill")
+    
+    if MOVEMENT_CONFIG.isRunning then
+        countdownLabel.Text = string.format("Running %d/%d", MOVEMENT_CONFIG.currentWaypoint, #MOVEMENT_CONFIG.waypoints)
+        countdownLabel.TextColor3 = Color3.fromRGB(255, 165, 0) -- Orange
+        progressFill.Size = UDim2.new(1, 0, 1, 0)
+        progressFill.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    elseif not MOVEMENT_CONFIG.enabled then
+        countdownLabel.Text = "Stopped"
+        countdownLabel.TextColor3 = Color3.fromRGB(255, 85, 85) -- Red
+        progressFill.Size = UDim2.new(0, 0, 1, 0)
+    else
+        local nextIn = GetNextSequenceIn()
+        local progress = 1 - (nextIn / MOVEMENT_CONFIG.intervalSeconds)
+        
+        countdownLabel.Text = string.format("Next: %s", FormatTime(math.ceil(nextIn)))
+        countdownLabel.TextColor3 = Color3.fromRGB(0, 255, 127) -- Green
+        
+        -- Animate progress bar
+        game:GetService('TweenService'):Create(progressFill, TweenInfo.new(0.5), {
+            Size = UDim2.new(math.max(0, progress), 0, 1, 0)
+        }):Play()
+        
+        -- Change color as countdown gets closer
+        if nextIn <= 10 then
+            countdownLabel.TextColor3 = Color3.fromRGB(255, 85, 85) -- Red
+            progressFill.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+        elseif nextIn <= 30 then
+            countdownLabel.TextColor3 = Color3.fromRGB(255, 165, 0) -- Orange
+            progressFill.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        else
+            countdownLabel.TextColor3 = Color3.fromRGB(0, 255, 127) -- Green
+            progressFill.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+        end
+    end
+end
+
+function ShowCountdownPopup()
+    MOVEMENT_CONFIG.showCountdown = true
+    if not countdownGui then
+        CreateCountdownGUI()
+    else
+        countdownGui.Enabled = true
+    end
+    
+    -- Start update loop
+    if countdownConnection then
+        countdownConnection:Disconnect()
+    end
+    
+    countdownConnection = RunService.Heartbeat:Connect(function()
+        if MOVEMENT_CONFIG.showCountdown then
+            UpdateCountdownDisplay()
+        end
+    end)
+end
+
+function HideCountdownPopup()
+    MOVEMENT_CONFIG.showCountdown = false
+    if countdownGui then
+        countdownGui.Enabled = false
+    end
+    
+    if countdownConnection then
+        countdownConnection:Disconnect()
+        countdownConnection = nil
+    end
+end
+
+function ToggleCountdownPopup()
+    if MOVEMENT_CONFIG.showCountdown then
+        HideCountdownPopup()
+    else
+        ShowCountdownPopup()
+    end
+end
+
+function SetCountdownPosition(position)
+    MOVEMENT_CONFIG.countdownPosition = position
+    if countdownGui and countdownFrame then
+        if position == "TopCenter" then
+            countdownFrame.Position = UDim2.new(0.5, -150, 0, 10)
+        elseif position == "TopLeft" then
+            countdownFrame.Position = UDim2.new(0, 10, 0, 10)
+        elseif position == "TopRight" then
+            countdownFrame.Position = UDim2.new(1, -310, 0, 10)
+        elseif position == "Center" then
+            countdownFrame.Position = UDim2.new(0.5, -150, 0.5, -60)
+        end
+    end
+end
+
 -- Add waypoint
 function AddWaypoint(x, y, z)
     local waypoint = Vector3.new(x, y, z)
@@ -446,6 +704,31 @@ MainTab:CreateButton({
     end,
 })
 
+MainTab:CreateToggle({
+    Name = "📊 Show Countdown Popup",
+    CurrentValue = MOVEMENT_CONFIG.showCountdown,
+    Flag = "CountdownToggle",
+    Callback = function(Value)
+        if Value then
+            ShowCountdownPopup()
+            Rayfield:Notify({
+                Title = "📊 Popup Shown",
+                Content = "Countdown popup is now visible!",
+                Duration = 2,
+                Image = 4483362458
+            })
+        else
+            HideCountdownPopup()
+            Rayfield:Notify({
+                Title = "📊 Popup Hidden",
+                Content = "Countdown popup is now hidden!",
+                Duration = 2,
+                Image = 4483362458
+            })
+        end
+    end,
+})
+
 -- ====== CONFIGURATION TAB ======
 ConfigTab:CreateSlider({
     Name = "⏰ Sequence Interval (seconds)",
@@ -517,6 +800,22 @@ ConfigTab:CreateSlider({
     end,
 })
 
+ConfigTab:CreateDropdown({
+    Name = "📍 Countdown Popup Position",
+    Options = {"TopCenter", "TopLeft", "TopRight", "Center"},
+    CurrentOption = MOVEMENT_CONFIG.countdownPosition,
+    Flag = "CountdownPositionDropdown",
+    Callback = function(Option)
+        SetCountdownPosition(Option)
+        Rayfield:Notify({
+            Title = "📍 Position Updated",
+            Content = "Countdown popup moved to " .. Option,
+            Duration = 2,
+            Image = 4483362458
+        })
+    end,
+})
+
 ConfigTab:CreateButton({
     Name = "🗑️ Clear All Waypoints",
     Callback = function()
@@ -565,10 +864,20 @@ _G.SequenceMovement = {
     addWaypoint = AddWaypoint,
     clearWaypoints = ClearWaypoints,
     getStatus = GetStatus,
-    createGUI = CreateSimpleGUI
+    createGUI = CreateSimpleGUI,
+    showCountdown = ShowCountdownPopup,
+    hideCountdown = HideCountdownPopup,
+    toggleCountdown = ToggleCountdownPopup,
+    setCountdownPosition = SetCountdownPosition
 }
 
 CreateSimpleGUI()
+
+-- Initialize countdown popup
+task.wait(1)
+if MOVEMENT_CONFIG.showCountdown then
+    ShowCountdownPopup()
+end
 
 -- Auto start (optional - remove if you want manual start)
 task.wait(2)
