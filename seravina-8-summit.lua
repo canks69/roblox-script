@@ -35,6 +35,8 @@ frame.Size = UDim2.new(0, 200, 0, 100)
 frame.Position = UDim2.new(0, 10, 0, 10)
 frame.BackgroundColor3 = Color3.new(0, 0, 0)
 frame.BorderSizePixel = 2
+frame.Active = true -- Diperlukan untuk dragging
+frame.Draggable = true -- Membuat frame bisa di drag
 frame.Parent = screenGui
 
 local playButton = Instance.new("TextButton")
