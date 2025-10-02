@@ -9,6 +9,7 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 -- Variabel kontrol
 local isRunning = false
 local currentTween = nil
+local speedMode = "normal" -- "normal" atau "fast"
 
 -- Jalur posisi
 local waypoints = {
@@ -31,7 +32,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Size = UDim2.new(0, 200, 0, 130) -- Diperbesar untuk tombol speed
 frame.Position = UDim2.new(0, 10, 0, 10)
 frame.BackgroundColor3 = Color3.new(0, 0, 0)
 frame.BorderSizePixel = 2
@@ -55,10 +56,26 @@ pauseButton.TextColor3 = Color3.new(1, 1, 1)
 pauseButton.BackgroundColor3 = Color3.new(0.7, 0, 0)
 pauseButton.Parent = frame
 
+local normalButton = Instance.new("TextButton")
+normalButton.Size = UDim2.new(0, 80, 0, 25)
+normalButton.Position = UDim2.new(0, 10, 0, 50)
+normalButton.Text = "NORMAL"
+normalButton.TextColor3 = Color3.new(1, 1, 1)
+normalButton.BackgroundColor3 = Color3.new(0, 0.5, 0.8) -- Biru untuk normal
+normalButton.Parent = frame
+
+local fastButton = Instance.new("TextButton")
+fastButton.Size = UDim2.new(0, 80, 0, 25)
+fastButton.Position = UDim2.new(0, 100, 0, 50)
+fastButton.Text = "FAST"
+fastButton.TextColor3 = Color3.new(1, 1, 1)
+fastButton.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5) -- Abu-abu untuk tidak aktif
+fastButton.Parent = frame
+
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, -20, 0, 30)
-statusLabel.Position = UDim2.new(0, 10, 0, 50)
-statusLabel.Text = "Status: Stopped"
+statusLabel.Position = UDim2.new(0, 10, 0, 80)
+statusLabel.Text = "Status: Stopped | Speed: Normal (6min)"
 statusLabel.TextColor3 = Color3.new(1, 1, 1)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Parent = frame
@@ -85,13 +102,16 @@ end
 
 -- Fungsi untuk melakukan fly sequence
 local function startFlySequence()
-    statusLabel.Text = "Status: Running"
+    local speedText = speedMode == "normal" and "Normal (6min)" or "Fast (45sec)"
+    statusLabel.Text = "Status: Running | Speed: " .. speedText
     
     -- Teleport ke posisi awal
     teleportTo(waypoints[1])
     wait(0.5)
     
-    local timePerSegment = 45 / (#waypoints - 1)
+    -- Hitung waktu berdasarkan speed mode
+    local totalTime = speedMode == "normal" and 360 or 45 -- 6 menit = 360 detik
+    local timePerSegment = totalTime / (#waypoints - 1)
     
     -- Tween melalui setiap waypoint
     for i = 2, #waypoints do
@@ -138,7 +158,27 @@ pauseButton.MouseButton1Click:Connect(function()
     if currentTween then
         currentTween:Cancel()
     end
-    statusLabel.Text = "Status: Stopped"
+    local speedText = speedMode == "normal" and "Normal (6min)" or "Fast (45sec)"
+    statusLabel.Text = "Status: Stopped | Speed: " .. speedText
+end)
+
+-- Event handlers untuk tombol speed
+normalButton.MouseButton1Click:Connect(function()
+    speedMode = "normal"
+    normalButton.BackgroundColor3 = Color3.new(0, 0.5, 0.8) -- Biru aktif
+    fastButton.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5) -- Abu-abu tidak aktif
+    if not isRunning then
+        statusLabel.Text = "Status: Stopped | Speed: Normal (6min)"
+    end
+end)
+
+fastButton.MouseButton1Click:Connect(function()
+    speedMode = "fast"
+    fastButton.BackgroundColor3 = Color3.new(0.8, 0.5, 0) -- Orange aktif
+    normalButton.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5) -- Abu-abu tidak aktif
+    if not isRunning then
+        statusLabel.Text = "Status: Stopped | Speed: Fast (45sec)"
+    end
 end)
 
 -- Handle character respawn
